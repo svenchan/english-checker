@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中学生英作文チェッカー</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useRef } = React;
+
+        // Lucide React icons as inline SVG components
+        const BookOpen = ({ className }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+        );
+
+        const Send = ({ className }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+        );
+
+        const CheckCircle = ({ className }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+        );
+
+        const AlertCircle = ({ className }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+        );
+
+        const Lightbulb = ({ className }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="9" y1="18" x2="15" y2="18"></line>
+                <line x1="10" y1="22" x2="14" y2="22"></line>
+                <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path>
+            </svg>
+        );
+
+        const RefreshCw = ({ className }) => (
+            <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+        );
+
+        const EnglishWritingChecker = () => {
+            const [studentText, setStudentText] = useState('');
+            const [isChecking, setIsChecking] = useState(false);
+            const [feedback, setFeedback] = useState(null);
+            const [selectedMistake, setSelectedMistake] = useState(null);
+            const textareaRef = useRef(null);
+
+            const checkWriting = async () => {
+                if (!studentText.trim() || isChecking) return;
+
+                setIsChecking(true);
+                setFeedback(null);
+                setSelectedMistake(null);
+
+                try {
+                    const prompt = `
+あなたは日本の中学生に英語を教える優しい先生です。
+
+生徒が書いた英文: "${studentText}"
+
+この英文をチェックして、以下のJSON形式で返してください：
+
+{
+  "mistakes": [
+    {
+      "original": "間違っている部分の原文",
+      "corrected": "正しい英語",
+      "explanation": "なぜ間違っているか、中学生にわかりやすい日本語で説明（50文字以内）",
+      "tip": "改善のヒント（30文字以内）",
+      "type": "grammar" または "vocabulary" または "spelling"
+    }
+  ],
+  "overallScore": 0から100の数字,
+  "encouragement": "生徒を励ますコメント（30文字以内）",
+  "goodPoints": ["よくできている点1", "よくできている点2"],
+  "correctedText": "全体を修正した英文"
+}
+
+重要な注意点：
+- 中学生レベルの英語に基づいて評価してください
+- 説明は簡単な日本語で、中学生が理解できるように
+- 文法用語は使わず、わかりやすい言葉で説明
+- 小さなミスも見逃さず指摘してください
+- 励ましの言葉を必ず入れてください
+- 間違いがない場合は、mistakes配列を空にしてください
+
+JSONのみを返してください。他のテキストは含めないでください。
+`;
+
+                    const response = await fetch("https://api.anthropic.com/v1/messages", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            model: "claude-sonnet-4-20250514",
+                            max_tokens: 2000,
+                            messages: [{ role: "user", content: prompt }]
+                        })
+                    });
+
+                    const data = await response.json();
+                    let responseText = data.content[0].text;
+                    responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+                    const parsedFeedback = JSON.parse(responseText);
+
+                    setFeedback(parsedFeedback);
+
+                } catch (error) {
+                    console.error('Error checking writing:', error);
+                    setFeedback({
+                        mistakes: [],
+                        overallScore: 0,
+                        encouragement: "エラーが発生しました。もう一度試してください。",
+                        goodPoints: [],
+                        correctedText: studentText
+                    });
+                } finally {
+                    setIsChecking(false);
+                }
+            };
+
+            const resetChecker = () => {
+                setStudentText('');
+                setFeedback(null);
+                setSelectedMistake(null);
+            };
+
+            const getScoreColor = (score) => {
+                if (score >= 80) return 'text-green-600 bg-green-100';
+                if (score >= 60) return 'text-yellow-600 bg-yellow-100';
+                return 'text-red-600 bg-red-100';
+            };
+
+            const getMistakeTypeLabel = (type) => {
+                const labels = {
+                    grammar: '文法',
+                    vocabulary: '単語',
+                    spelling: 'スペル'
+                };
+                return labels[type] || '文法';
+            };
+
+            const getMistakeTypeColor = (type) => {
+                const colors = {
+                    grammar: 'bg-blue-100 text-blue-700',
+                    vocabulary: 'bg-purple-100 text-purple-700',
+                    spelling: 'bg-orange-100 text-orange-700'
+                };
+                return colors[type] || 'bg-blue-100 text-blue-700';
+            };
+
+            const highlightMistakes = () => {
+                if (!feedback || !feedback.mistakes.length) return studentText;
+
+                let highlightedText = studentText;
+                feedback.mistakes.forEach((mistake, idx) => {
+                    const regex = new RegExp(mistake.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                    highlightedText = highlightedText.replace(
+                        regex,
+                        `<span class="bg-red-200 cursor-pointer hover:bg-red-300 transition-colors rounded px-1" data-mistake-id="${idx}">${mistake.original}</span>`
+                    );
+                });
+                return highlightedText;
+            };
+
+            const handleTextClick = (e) => {
+                const mistakeId = e.target.getAttribute('data-mistake-id');
+                if (mistakeId !== null) {
+                    setSelectedMistake(parseInt(mistakeId));
+                }
+            };
+
+            return (
+                <div className="flex h-screen bg-gray-50">
+                    {/* Main Area */}
+                    <div className="flex-1 flex flex-col">
+                        {/* Header */}
+                        <div className="bg-blue-600 text-white p-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3">
+                                    <BookOpen className="h-8 w-8" />
+                                    <div>
+                                        <h1 className="text-2xl font-bold">英作文チェッカー</h1>
+                                        <p className="text-blue-100 text-sm">あなたの英語をチェックします</p>
+                                    </div>
+                                </div>
+                                {feedback && (
+                                    <button
+                                        onClick={resetChecker}
+                                        className="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                                    >
+                                        <RefreshCw className="h-4 w-4" />
+                                        <span>新しく書く</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="max-w-4xl mx-auto space-y-6">
+                                {/* Input Area */}
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <label className="text-lg font-semibold text-gray-800">
+                                            英文を書いてください
+                                        </label>
+                                        <span className="text-sm text-gray-500">
+                                            {studentText.length} 文字
+                                        </span>
+                                    </div>
+                                    <textarea
+                                        ref={textareaRef}
+                                        value={studentText}
+                                        onChange={(e) => setStudentText(e.target.value)}
+                                        placeholder="例: I go to school yesterday.&#10;&#10;ここに英文を入力してください..."
+                                        className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                        disabled={isChecking || feedback !== null}
+                                    />
+                                    <div className="mt-4 flex justify-end">
+                                        <button
+                                            onClick={checkWriting}
+                                            disabled={isChecking || !studentText.trim() || feedback !== null}
+                                            className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                                        >
+                                            {isChecking ? (
+                                                <>
+                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                                    <span>チェック中...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="h-5 w-5" />
+                                                    <span>チェックする</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Feedback Area */}
+                                {feedback && (
+                                    <>
+                                        {/* Score and Encouragement */}
+                                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center space-x-4">
+                                                    <div className={`px-6 py-3 rounded-lg text-2xl font-bold ${getScoreColor(feedback.overallScore)}`}>
+                                                        {feedback.overallScore}点
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-lg font-semibold text-gray-800">{feedback.encouragement}</p>
+                                                        <p className="text-sm text-gray-600 mt-1">
+                                                            {feedback.mistakes.length === 0 
+                                                                ? '完璧です！間違いはありません。'
+                                                                : `${feedback.mistakes.length}個の改善点が見つかりました。`
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Good Points */}
+                                            {feedback.goodPoints.length > 0 && (
+                                                <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                                                    <h3 className="font-semibold text-green-800 mb-2 flex items-center">
+                                                        <CheckCircle className="h-5 w-5 mr-2" />
+                                                        よくできているところ
+                                                    </h3>
+                                                    <ul className="space-y-1">
+                                                        {feedback.goodPoints.map((point, idx) => (
+                                                            <li key={idx} className="text-green-700 text-sm flex items-start">
+                                                                <span className="mr-2">✓</span>
+                                                                <span>{point}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Highlighted Text */}
+                                        {feedback.mistakes.length > 0 && (
+                                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                                <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                                                    間違いをチェック（赤い部分をクリック）
+                                                </h3>
+                                                <div 
+                                                    className="p-4 bg-gray-50 rounded-lg text-lg leading-relaxed border border-gray-200"
+                                                    dangerouslySetInnerHTML={{ __html: highlightMistakes() }}
+                                                    onClick={handleTextClick}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Mistakes List */}
+                                        {feedback.mistakes.length > 0 && (
+                                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                                    <AlertCircle className="h-5 w-5 mr-2 text-red-600" />
+                                                    改善点リスト
+                                                </h3>
+                                                <div className="space-y-4">
+                                                    {feedback.mistakes.map((mistake, idx) => (
+                                                        <div 
+                                                            key={idx}
+                                                            className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                                                                selectedMistake === idx
+                                                                    ? 'border-blue-500 bg-blue-50'
+                                                                    : 'border-gray-200 hover:border-blue-300'
+                                                            }`}
+                                                            onClick={() => setSelectedMistake(idx)}
+                                                        >
+                                                            <div className="flex items-start justify-between mb-2">
+                                                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getMistakeTypeColor(mistake.type)}`}>
+                                                                    {getMistakeTypeLabel(mistake.type)}
+                                                                </span>
+                                                                <span className="text-sm font-semibold text-gray-600">#{idx + 1}</span>
+                                                            </div>
+                                                            
+                                                            <div className="space-y-2 mt-3">
+                                                                <div>
+                                                                    <p className="text-xs text-gray-600 mb-1">❌ 間違い</p>
+                                                                    <p className="text-base font-medium text-red-600 bg-red-50 px-3 py-2 rounded">
+                                                                        {mistake.original}
+                                                                    </p>
+                                                                </div>
+                                                                
+                                                                <div>
+                                                                    <p className="text-xs text-gray-600 mb-1">✅ 正しい英語</p>
+                                                                    <p className="text-base font-medium text-green-600 bg-green-50 px-3 py-2 rounded">
+                                                                        {mistake.corrected}
+                                                                    </p>
+                                                                </div>
+                                                                
+                                                                <div className="pt-2 border-t border-gray-200">
+                                                                    <p className="text-sm text-gray-800 mb-2">
+                                                                        <strong>説明：</strong> {mistake.explanation}
+                                                                    </p>
+                                                                    <div className="flex items-start space-x-2 p-3 bg-yellow-50 rounded border border-yellow-200">
+                                                                        <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                                                        <p className="text-sm text-yellow-800">
+                                                                            <strong>ヒント：</strong> {mistake.tip}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Corrected Text */}
+                                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                            <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                                                修正後の英文
+                                            </h3>
+                                            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                                                <p className="text-base leading-relaxed text-gray-800">
+                                                    {feedback.correctedText}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<EnglishWritingChecker />, document.getElementById('root'));
+    </script>
+</body>
+</html>
