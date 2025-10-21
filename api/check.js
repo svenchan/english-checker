@@ -26,12 +26,9 @@ export default async function handler(req, res) {
 
     // Map class codes to API keys (add more classes as needed)
     const apiKeyMap = {
-      'CLASS1A': process.env.GROQ_API_KEY_1A,
-      'CLASS1B': process.env.GROQ_API_KEY_1B,
-      'CLASS2A': process.env.GROQ_API_KEY_2A,
-      'CLASS2B': process.env.GROQ_API_KEY_2B,
-      'CLASS3A': process.env.GROQ_API_KEY_3A,
-      'CLASS3B': process.env.GROQ_API_KEY_3B,
+      'CLASS21': process.env.GROQ_API_KEY_21,
+      'CLASS22': process.env.GROQ_API_KEY_22,
+      'CLASS23': process.env.GROQ_API_KEY_23,
       // Add more classes here as needed
     };
 
