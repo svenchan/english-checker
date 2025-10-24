@@ -78,6 +78,7 @@
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [classCodeInput, setClassCodeInput] = useState('');
             const textareaRef = useRef(null);
+            const mistakeRefs = useRef([]);
 
             // Check if class code exists in session storage on mount
             useEffect(() => {
@@ -197,7 +198,16 @@
             const handleTextClick = (e) => {
                 const mistakeId = e.target.getAttribute('data-mistake-id');
                 if (mistakeId !== null) {
-                    setSelectedMistake(parseInt(mistakeId));
+                    const id = parseInt(mistakeId);
+                    setSelectedMistake(id);
+                    
+                    // Scroll to the corresponding mistake card
+                    if (mistakeRefs.current[id]) {
+                        mistakeRefs.current[id].scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
                 }
             };
 
@@ -373,6 +383,7 @@
                                                     {feedback.mistakes.map((mistake, idx) => (
                                                         <div 
                                                             key={idx}
+                                                            ref={(el) => mistakeRefs.current[idx] = el}
                                                             className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
                                                                 selectedMistake === idx
                                                                     ? 'border-blue-500 bg-blue-50'
