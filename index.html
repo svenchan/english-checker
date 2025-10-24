@@ -331,38 +331,36 @@
                                 {/* Feedback Area */}
                                 {feedback && (
                                     <>
-                                        {/* Score */}
+                                        {/* Score and Highlighted Text Combined */}
                                         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center space-x-4">
-                                                    <div className={`px-6 py-3 rounded-lg text-2xl font-bold ${getScoreColor(feedback.overallScore)}`}>
-                                                        {feedback.overallScore}点
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm text-gray-600">
-                                                            {feedback.mistakes.length === 0 
-                                                                ? '完璧です!間違いはありません。'
-                                                                : `${feedback.mistakes.length}個の改善点が見つかりました。`
-                                                            }
-                                                        </p>
-                                                    </div>
+                                            <div className="flex items-center space-x-4 mb-6">
+                                                <div className={`px-6 py-3 rounded-lg text-2xl font-bold ${getScoreColor(feedback.overallScore)}`}>
+                                                    {feedback.overallScore}点
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-gray-600">
+                                                        {feedback.mistakes.length === 0 
+                                                            ? '完璧です!間違いはありません。'
+                                                            : `${feedback.mistakes.length}個の改善点が見つかりました。`
+                                                        }
+                                                    </p>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        {/* Highlighted Text */}
-                                        {feedback.mistakes.length > 0 && (
-                                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                                                <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                                                    間違いをチェック(赤い部分をクリック)
-                                                </h3>
-                                                <div 
-                                                    className="p-4 bg-gray-50 rounded-lg text-lg leading-relaxed border border-gray-200"
-                                                    dangerouslySetInnerHTML={{ __html: highlightMistakes() }}
-                                                    onClick={handleTextClick}
-                                                />
-                                            </div>
-                                        )}
+                                            {/* Highlighted Text */}
+                                            {feedback.mistakes.length > 0 && (
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                                                        間違いをチェック(赤い部分をクリック)
+                                                    </h3>
+                                                    <div 
+                                                        className="p-4 bg-gray-50 rounded-lg text-lg leading-relaxed border border-gray-200"
+                                                        dangerouslySetInnerHTML={{ __html: highlightMistakes() }}
+                                                        onClick={handleTextClick}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
 
                                         {/* Mistakes List */}
                                         {feedback.mistakes.length > 0 && (
@@ -405,15 +403,9 @@
                                                                 </div>
                                                                 
                                                                 <div className="pt-2 border-t border-gray-200">
-                                                                    <p className="text-sm text-gray-800 mb-2">
+                                                                    <p className="text-sm text-gray-800">
                                                                         <strong>説明:</strong> {mistake.explanation}
                                                                     </p>
-                                                                    <div className="flex items-start space-x-2 p-3 bg-yellow-50 rounded border border-yellow-200">
-                                                                        <Lightbulb className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                                                                        <p className="text-sm text-yellow-800">
-                                                                            <strong>ヒント:</strong> {mistake.tip}
-                                                                        </p>
-                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
