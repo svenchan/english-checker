@@ -331,9 +331,9 @@
                                 {/* Feedback Area */}
                                 {feedback && (
                                     <>
-                                        {/* Score and Good Points */}
+                                        {/* Score */}
                                         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                                            <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center justify-between">
                                                 <div className="flex items-center space-x-4">
                                                     <div className={`px-6 py-3 rounded-lg text-2xl font-bold ${getScoreColor(feedback.overallScore)}`}>
                                                         {feedback.overallScore}点
@@ -348,24 +348,6 @@
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Good Points */}
-                                            {feedback.goodPoints && feedback.goodPoints.length > 0 && (
-                                                <div className="mt-4 p-4 bg-green-50 rounded-lg border border-green-200">
-                                                    <h3 className="font-semibold text-green-800 mb-2 flex items-center">
-                                                        <CheckCircle className="h-5 w-5 mr-2" />
-                                                        よくできているところ
-                                                    </h3>
-                                                    <ul className="space-y-1">
-                                                        {feedback.goodPoints.map((point, idx) => (
-                                                            <li key={idx} className="text-green-700 text-sm flex items-start">
-                                                                <span className="mr-2">✓</span>
-                                                                <span>{point}</span>
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
                                         </div>
 
                                         {/* Highlighted Text */}
