@@ -2,9 +2,9 @@
  * AI Prompt Templates
  */
 
-export const SYSTEM_MESSAGE = "あなたは日本の中学生に英語を教える優しい先生です。必ずJSON形式で回答してください。explanationでは「ルール」を説明してください。修正方法を繰り返さないでください。文法的に正しい英文は絶対に間違いにしないでください。";
+const SYSTEM_MESSAGE = "あなたは日本の中学生に英語を教える優しい先生です。必ずJSON形式で回答してください。explanationでは「ルール」を説明してください。修正方法を繰り返さないでください。文法的に正しい英文は絶対に間違いにしないでください。";
 
-export function buildCheckPrompt(text) {
+function buildCheckPrompt(text) {
   return `あなたは日本の中学生に英語を教える優しい先生です。
 
 生徒が書いた英文: "${text}"
@@ -95,9 +95,15 @@ export function buildCheckPrompt(text) {
 必ずJSONのみを返してください。他のテキストは含めないでください。`;
 }
 
-export const GROQ_SETTINGS = {
+const GROQ_SETTINGS = {
   model: "llama-3.3-70b-versatile",
   temperature: 0.5,
   max_tokens: 2500,
   response_format: { type: "json_object" }
+};
+
+module.exports = {
+  SYSTEM_MESSAGE,
+  buildCheckPrompt,
+  GROQ_SETTINGS
 };
