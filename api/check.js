@@ -1,9 +1,9 @@
-import { getApiKeyForClass, isValidClassCode } from './config/classCodeMap.js';
-import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from './config/prompt.js';
-import { ERRORS, HTTP_STATUS } from './config/errors.js';
-import { validateAndFixResponse } from './utils/responseValidator.js';
+const { getApiKeyForClass, isValidClassCode } = require('./config/classCodeMap.js');
+const { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } = require('./config/prompt.js');
+const { ERRORS, HTTP_STATUS } = require('./config/errors.js');
+const { validateAndFixResponse } = require('./utils/responseValidator.js');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -106,4 +106,4 @@ export default async function handler(req, res) {
       details: error.message 
     });
   }
-}
+};
