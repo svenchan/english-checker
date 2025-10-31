@@ -2,7 +2,7 @@
  * Class Code to API Key Mapping
  */
 
-export const CLASS_CODE_MAP = {
+const CLASS_CODE_MAP = {
   'CLASS11': process.env.GROQ_API_KEY_11,
   'CLASS12': process.env.GROQ_API_KEY_12,
   'CLASS13': process.env.GROQ_API_KEY_13,
@@ -16,11 +16,11 @@ export const CLASS_CODE_MAP = {
   // Add more classes here as needed
 };
 
-export function isValidClassCode(code) {
+function isValidClassCode(code) {
   return code.toUpperCase() in CLASS_CODE_MAP;
 }
 
-export function getApiKeyForClass(code) {
+function getApiKeyForClass(code) {
   const apiKey = CLASS_CODE_MAP[code.toUpperCase()];
   if (!apiKey) {
     throw new Error(`No API key found for class code: ${code}`);
@@ -28,6 +28,13 @@ export function getApiKeyForClass(code) {
   return apiKey;
 }
 
-export function getAllClassCodes() {
+function getAllClassCodes() {
   return Object.keys(CLASS_CODE_MAP);
 }
+
+module.exports = {
+  CLASS_CODE_MAP,
+  isValidClassCode,
+  getApiKeyForClass,
+  getAllClassCodes
+};
