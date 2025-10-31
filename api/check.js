@@ -1,7 +1,10 @@
-const { getApiKeyForClass, isValidClassCode } = require('./config/classCodeMap.js');
-const { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } = require('./config/prompt.js');
-const { ERRORS, HTTP_STATUS } = require('./config/errors.js');
-const { validateAndFixResponse } = require('./utils/responseValidator.js');  // ← This line
+const path = require('path');
+const { getApiKeyForClass, isValidClassCode } = require('./config/classCodeMap');
+const { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } = require('./config/prompt');
+const { ERRORS, HTTP_STATUS } = require('./config/errors');
+
+// Try requiring with absolute path
+const { validateAndFixResponse } = require(path.join(__dirname, 'utils', 'responseValidator'));
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
