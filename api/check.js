@@ -1,15 +1,13 @@
 const { getApiKeyForClass, isValidClassCode } = require('./config/classCodeMap.js');
 const { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } = require('./config/prompt.js');
 const { ERRORS, HTTP_STATUS } = require('./config/errors.js');
-const { validateAndFixResponse } = require('./utils/responseValidator.js');
+const { validateAndFixResponse } = require('./utils/responseValidator.js');  // ← This line
 
 module.exports = async function handler(req, res) {
-  // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // Handle OPTIONS request
   if (req.method === 'OPTIONS') {
     return res.status(HTTP_STATUS.OK).end();
   }
@@ -23,7 +21,6 @@ module.exports = async function handler(req, res) {
   try {
     const { text, classCode } = req.body;
 
-    // Validate input
     if (!text) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
         error: ERRORS.NO_TEXT 
@@ -36,7 +33,6 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Validate class code and get API key
     if (!isValidClassCode(classCode)) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
         error: ERRORS.INVALID_CLASS_CODE 
@@ -44,11 +40,8 @@ module.exports = async function handler(req, res) {
     }
 
     const apiKey = getApiKeyForClass(classCode);
-
-    // Build the prompt
     const prompt = buildCheckPrompt(text);
 
-    // Call Groq API
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -76,7 +69,6 @@ module.exports = async function handler(req, res) {
     if (!response.ok) {
       const errorData = await response.json();
       
-      // Handle rate limiting
       if (response.status === 429) {
         return res.status(HTTP_STATUS.RATE_LIMIT).json({ 
           error: ERRORS.RATE_LIMIT_EXCEEDED 
@@ -89,12 +81,9 @@ module.exports = async function handler(req, res) {
     const data = await response.json();
     let responseText = data.choices[0].message.content;
     
-    // Clean up response
     responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     
     let parsedFeedback = JSON.parse(responseText);
-    
-    // Validate and fix the response
     parsedFeedback = validateAndFixResponse(parsedFeedback);
     
     return res.status(HTTP_STATUS.OK).json(parsedFeedback);
@@ -107,3 +96,21 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+```
+
+---
+
+## **Final Structure:**
+```
+your-repo/
+├── api/
+│   ├── config/
+│   │   ├── classCodeMap.js     ← Class codes mapping
+│   │   ├── errors.js           ← Error messages
+│   │   └── prompt.js           ← AI prompts & settings
+│   ├── utils/
+│   │   └── responseValidator.js ← Response validation logic
+│   └── check.js                ← Main API handler
+├── index.html                  ← Frontend
+├── vercel.json                 ← Vercel config
+└── README.md
