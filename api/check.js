@@ -99,21 +99,4 @@ module.exports = async function handler(req, res) {
     });
   }
 };
-```
 
----
-
-## **Final Structure:**
-```
-your-repo/
-├── api/
-│   ├── config/
-│   │   ├── classCodeMap.js     ← Class codes mapping
-│   │   ├── errors.js           ← Error messages
-│   │   └── prompt.js           ← AI prompts & settings
-│   ├── utils/
-│   │   └── responseValidator.js ← Response validation logic
-│   └── check.js                ← Main API handler
-├── index.html                  ← Frontend
-├── vercel.json                 ← Vercel config
-└── README.md
