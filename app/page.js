@@ -1,6 +1,7 @@
 // app/page.js
 "use client";
 
+import { useState, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useChecker } from "@/hooks/useChecker";
 import { LoginForm } from "@/components/checker/LoginForm";
@@ -8,10 +9,58 @@ import { Header } from "@/components/checker/Header";
 import { WritingInput } from "@/components/checker/WritingInput";
 import { FeedbackDisplay } from "@/components/checker/FeedbackDisplay";
 import { MistakeList } from "@/components/checker/MistakeList";
+import { sanitizeForRegex } from "@/lib/utils";
 
 export default function Page() {
   const { classCode, isAuthenticated, login, logout } = useAuth();
   const checker = useChecker(classCode, logout);
+
+  // moved highlight hook state into parent
+  const [selectedMistake, setSelectedMistake] = useState(null);
+  const mistakeRefs = useRef({});
+
+  const highlightMistakes = () => {
+    const studentText = checker.studentText || "";
+    const mistakes = checker.feedback?.mistakes || [];
+    if (!mistakes || mistakes.length === 0) return studentText;
+
+    let highlightedText = studentText;
+    // preserve original indices so data-mistake-id matches refs in MistakeList
+    const indexed = mistakes.map((m, i) => ({ ...m, __originalIndex: i }));
+    const sorted = [...indexed].sort(
+      (a, b) => (b.original?.length || 0) - (a.original?.length || 0)
+    );
+
+    sorted.forEach((mistake) => {
+      if (!mistake.original) return;
+      const regex = new RegExp(sanitizeForRegex(mistake.original), "gi");
+      highlightedText = highlightedText.replace(
+        regex,
+        `<span class="bg-red-200 cursor-pointer hover:bg-red-300 transition-colors rounded px-1" data-mistake-id="${mistake.__originalIndex}">${mistake.original}</span>`
+      );
+    });
+
+    return highlightedText;
+  };
+
+  const handleTextClick = (e) => {
+    const mistakeId = e.target?.getAttribute?.("data-mistake-id");
+    if (mistakeId !== null && mistakeId !== undefined) {
+      const id = parseInt(mistakeId, 10);
+      setSelectedMistake(id);
+      if (mistakeRefs.current[id]) {
+        mistakeRefs.current[id].scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  };
+
+  const mistakeHighlight = {
+    selectedMistake,
+    setSelectedMistake,
+    mistakeRefs,
+    highlightMistakes,
+    handleTextClick
+  };
 
   if (!isAuthenticated) {
     return <LoginForm onLogin={login} />;
@@ -43,10 +92,12 @@ export default function Page() {
                   <FeedbackDisplay
                     feedback={checker.feedback}
                     studentText={checker.studentText}
+                    mistakeHighlight={mistakeHighlight}
                   />
                   <MistakeList
                     mistakes={checker.feedback.mistakes}
                     studentText={checker.studentText}
+                    mistakeHighlight={mistakeHighlight}
                   />
                 </>
               )}

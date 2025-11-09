@@ -2,13 +2,9 @@
 "use client";
 
 import { getScoreColor } from "@/lib/utils";
-import { useMistakeHighlight } from "@/hooks/useMistakeHighlight";
 
-export function FeedbackDisplay({ feedback, studentText }) {
-  const { highlightMistakes, handleTextClick } = useMistakeHighlight(
-    studentText,
-    feedback.mistakes
-  );
+export function FeedbackDisplay({ feedback, studentText, mistakeHighlight }) {
+  const { highlightMistakes, handleTextClick } = mistakeHighlight;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
