@@ -42,7 +42,7 @@ export function LoginForm({ onLogin }) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="例: CLASS1A"
+              placeholder="例: CLASS00"
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg text-center uppercase"
               autoFocus
             />

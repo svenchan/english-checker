@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Icons } from "@/components/ui/Icons";
 import { getMistakeTypeLabel, getMistakeTypeColor } from "@/lib/utils";
 
@@ -27,7 +28,6 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight }) {
             }`}
             onClick={() => {
               setSelectedMistake(idx);
-              // ensure list click also scrolls the card into view
               if (mistakeRefs.current[idx]) {
                 mistakeRefs.current[idx].scrollIntoView({ behavior: "smooth", block: "center" });
               }
@@ -53,7 +53,6 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight }) {
 
               <div className="pt-2 border-t border-gray-200">
                 <p className="text-sm text-gray-800"><strong>説明:</strong> {mistake.explanation}</p>
-                <p className="text-sm text-gray-600 mt-2"><strong>ヒント:</strong> {mistake.tip}</p>
               </div>
             </div>
           </div>
