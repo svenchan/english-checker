@@ -12,7 +12,7 @@ import { MistakeList } from "@/components/checker/MistakeList";
 import { sanitizeForRegex } from "@/lib/utils";
 
 export default function Page() {
-  const { classCode, isAuthenticated, login, logout } = useAuth();
+  const { classCode, isAuthenticated, login, logout, error, isLoading } = useAuth();
   const checker = useChecker(classCode, logout);
 
   // moved highlight hook state into parent
@@ -63,7 +63,7 @@ export default function Page() {
   };
 
   if (!isAuthenticated) {
-    return <LoginForm onLogin={login} />;
+    return <LoginForm onLogin={login} error={error} isLoading={isLoading} />;
   }
 
   return (
