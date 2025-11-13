@@ -85,6 +85,7 @@ export default function Page() {
                 onCheck={checker.checkWriting}
                 isChecking={checker.isChecking}
                 isDisabled={!!checker.feedback}
+                classCode={classCode}
               />
 
               {checker.feedback && (
@@ -96,6 +97,7 @@ export default function Page() {
                   />
                   <MistakeList
                     mistakes={checker.feedback.mistakes}
+                    levelUp={checker.feedback.levelUp}
                     studentText={checker.studentText}
                     mistakeHighlight={mistakeHighlight}
                   />

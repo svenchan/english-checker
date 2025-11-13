@@ -4,11 +4,24 @@ import React from "react";
 import { Icons } from "@/components/ui/Icons";
 import { getMistakeTypeLabel, getMistakeTypeColor } from "@/lib/utils";
 
-export function MistakeList({ mistakes, studentText, mistakeHighlight }) {
+export function MistakeList({ mistakes, levelUp, studentText, mistakeHighlight }) {
   const { selectedMistake, setSelectedMistake, mistakeRefs } = mistakeHighlight;
 
+  // Show level-up card only when there are no mistakes
   if (!mistakes || mistakes.length === 0) {
-    return null;
+    if (!levelUp) return null;
+    
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="p-4 rounded-lg border-2 border-green-500 bg-green-50">
+          <div className="flex items-start mb-2">
+            <Icons.TrendingUp className="h-5 w-5 mr-2 text-green-600 mt-0.5" />
+            <h4 className="text-base font-semibold text-green-800">レベルアップ</h4>
+          </div>
+          <p className="text-sm text-gray-800 mt-2 leading-relaxed">{levelUp}</p>
+        </div>
+      </div>
+    );
   }
 
   return (

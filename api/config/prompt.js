@@ -12,7 +12,7 @@
 
 // CHANGED: Shortened from 60+ characters to ~40 characters
 // Saves ~5-10 tokens per request
-const SYSTEM_MESSAGE = "日本の中学生向け英語教師。JSON形式で回答。文法的に正しい英文は間違いとしない。";
+const SYSTEM_MESSAGE = "日本の中学生向け英語教師。JSON形式で回答。文法的に正しい英文は絶対に間違いとしない。文法エラーと綴りミスのみ訂正。";
 
 // CHANGED: Balanced prompt - educational but not too verbose
 // Emphasizes clear explanations with grammar rules
@@ -38,14 +38,33 @@ function buildCheckPrompt(text) {
     }
   ],
   "overallScore": 0-100,
-  "goodPoints": ["良い点1", "良い点2"]
+  "levelUp": "間違い以外のコメント。この生徒が次のレベルに進むためのアドバイス。初心者向けにわかりやすく、中級者向けに自然に、上級者向けに洗練された表現を2〜3文で提案"
 }
 
-重要：
-- explanationでは文法ルールを明確に説明（例：「英語は主語+動詞の構造」「be動詞が必要」など）
-- 文法エラーのみ指摘、スタイルは無視
-- 完璧な英文はmistakes空配列、100点
-- 中学生が理解できる日本語で
+【絶対に守るルール】
+1. 文法的に正しい英文は絶対に間違いとしない
+2. 綴りミスと明確な文法エラーのみを指摘
+3. 内容の追加や変更は絶対にしない（例：「I watch videos」→「I watch basketball videos」は禁止）
+4. 語彙の置き換えは絶対にしない（例：「good」→「excellent」は禁止）
+5. より自然な表現への変更は絶対にしない
+6. スタイルや言い回しの改善は絶対にしない
+
+【指摘すべき間違いの例】
+- I go to school yesterday → went（時制の誤り）
+- She have a pen → has（主語と動詞の一致）
+- I am go to school → going（be動詞+動詞の誤り）
+- ther → their（綴りミス）
+
+【絶対に指摘してはいけない例】
+- I watch videos → basketball videos（内容の追加）
+- good → excellent（語彙の向上）
+- I like cats → I love cats（より自然な表現）
+- 文法的に正しいがシンプルな文
+
+explanationでは文法ルールを明確に説明（例：「英語は主語+動詞の構造」「be動詞が必要」など）
+完璧な英文はmistakes空配列、100点
+levelUpには次のステップへのポジティブなアドバイスを含める（文法エラーではない改善提案はここに）
+中学生が理解できる日本語で
 
 JSONのみ返してください。`;
 }
@@ -54,11 +73,11 @@ const GROQ_SETTINGS = {
   model: "llama-3.3-70b-versatile",
   // CHANGED: Reduced from 0.5 to 0.3
   // Lower temperature = more consistent, focused responses
-  temperature: 0.3,
+  temperature: 0.2,
   // CHANGED: Increased to 1200 to allow for educational explanations
   // Still prevents extreme spikes but allows detailed grammar explanations
   // Typical response: 400-800 tokens
-  max_tokens: 1200,
+  max_tokens: 600,
   response_format: { type: "json_object" }
 };
 

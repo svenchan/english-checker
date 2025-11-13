@@ -4,8 +4,9 @@
 import { useState, useEffect } from "react";
 import { Icons } from "@/components/ui/Icons";
 
-export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled }) {
+export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, classCode }) {
   const [cooldown, setCooldown] = useState(0);
+  const isTeacher = (classCode || "").toUpperCase() === "TEACHER";
   
   useEffect(() => {
     let interval;
@@ -19,7 +20,8 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled }
 
   const handleCheckClick = () => {
     onCheck();
-    setCooldown(60);
+    // Only start the 60s cooldown for non-teacher class codes
+    if (!isTeacher) setCooldown(60);
   };
 
   const handleTextChange = (newText) => {
