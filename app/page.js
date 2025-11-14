@@ -86,6 +86,7 @@ export default function Page() {
                 isChecking={checker.isChecking}
                 isDisabled={!!checker.feedback}
                 classCode={classCode}
+                feedback={checker.feedback}
               />
 
               {checker.feedback && (
