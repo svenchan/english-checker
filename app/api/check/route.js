@@ -2,7 +2,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { enqueue } from "./queue";
 import { getApiKeyForClass, isValidClassCode } from "../../../api/config/classCodeMap.js";
-import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "../../../api/config/prompt.js";
+import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "../../../api/config/checkWritingPrompt.js";
 import { ERRORS, HTTP_STATUS } from "../../../api/config/errors.js";
 import { validateAndFixResponse } from "../../../api/utils/responseValidator.js";
 
