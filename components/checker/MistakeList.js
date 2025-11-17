@@ -4,6 +4,49 @@ import React from "react";
 import { Icons } from "@/components/ui/Icons";
 import { getMistakeTypeLabel, getMistakeTypeColor } from "@/lib/utils";
 
+// Bold only the corrected/added parts in the corrected text
+function renderCorrectedWithBold(original, corrected) {
+  if (!original || !corrected) return corrected;
+
+  // Character-level diff to find what was added/changed
+  const s1 = original.toLowerCase();
+  const s2 = corrected.toLowerCase();
+  
+  // Find common prefix
+  let prefixLen = 0;
+  while (prefixLen < s1.length && prefixLen < s2.length && s1[prefixLen] === s2[prefixLen]) {
+    prefixLen++;
+  }
+  
+  // Find common suffix
+  let suffixLen = 0;
+  while (
+    suffixLen < s1.length - prefixLen &&
+    suffixLen < s2.length - prefixLen &&
+    s1[s1.length - 1 - suffixLen] === s2[s2.length - 1 - suffixLen]
+  ) {
+    suffixLen++;
+  }
+  
+  // If corrected is just a substring or identical, return as-is
+  if (prefixLen + suffixLen >= s2.length) {
+    return corrected;
+  }
+  
+  // Extract parts from the actual corrected string (preserving case)
+  const prefix = corrected.slice(0, prefixLen);
+  const middle = corrected.slice(prefixLen, corrected.length - suffixLen);
+  const suffix = corrected.slice(corrected.length - suffixLen);
+  
+  return (
+    <>
+      {prefix}
+      <strong className="font-bold">{middle}</strong>
+      {suffix}
+    </>
+  );
+}
+
 export function MistakeList({ mistakes, levelUp, studentText, mistakeHighlight }) {
   const { selectedMistake, setSelectedMistake, mistakeRefs } = mistakeHighlight;
 
@@ -56,12 +99,16 @@ export function MistakeList({ mistakes, levelUp, studentText, mistakeHighlight }
             <div className="space-y-2 mt-3">
               <div>
                 <p className="text-xs text-gray-600 mb-1">✕ 間違い</p>
-                <p className="text-base font-medium text-red-600 bg-red-50 px-3 py-2 rounded">{mistake.original}</p>
+                <p className="text-base font-medium text-red-600 bg-red-50 px-3 py-2 rounded">
+                  {mistake.original}
+                </p>
               </div>
 
               <div>
                 <p className="text-xs text-gray-600 mb-1">✓ 正しい英語</p>
-                <p className="text-base font-medium text-green-600 bg-green-50 px-3 py-2 rounded">{mistake.corrected}</p>
+                <p className="text-base font-medium text-green-600 bg-green-50 px-3 py-2 rounded">
+                  {renderCorrectedWithBold(mistake.original, mistake.corrected)}
+                </p>
               </div>
 
               <div className="pt-2 border-t border-gray-200">
