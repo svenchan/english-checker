@@ -5,6 +5,7 @@ import { getApiKeyForClass, isValidClassCode } from "../../../api/config/classCo
 import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "../../../api/config/checkWritingPrompt.js";
 import { ERRORS, HTTP_STATUS } from "../../../api/config/errors.js";
 import { validateAndFixResponse } from "../../../api/utils/responseValidator.js";
+import { createServerClient } from "@/lib/supabaseServer";
 
 export async function POST(req) {
   try {
@@ -60,6 +61,26 @@ export async function POST(req) {
 
       let parsedFeedback = JSON.parse(responseText);
       parsedFeedback = validateAndFixResponse(parsedFeedback);
+
+      // Log to Supabase
+      try {
+        const supabase = createServerClient();
+        const { error } = await supabase.from("writing_logs").insert({
+          student_id: body.studentId || null,
+          class_code: classCode,
+          prompt: prompt,
+          ai_response: responseText,
+          tokens_in: data.usage?.prompt_tokens || 0,
+          tokens_out: data.usage?.completion_tokens || 0,
+        });
+
+        if (error) {
+          console.error("Supabase logging error:", error);
+        }
+      } catch (logError) {
+        console.error("Failed to log to Supabase:", logError);
+        // Don't fail the request if logging fails
+      }
 
       return NextResponse.json(parsedFeedback, { status: HTTP_STATUS.OK });
     });
