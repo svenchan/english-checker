@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Icons } from "@/components/ui/Icons";
-import { getMistakeTypeLabel, getMistakeTypeColor } from "@/lib/utils";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { getMistakeTypeLabel, getMistakeTypeColor, buildCopyText } from "@/lib/utils";
 
 // Bold only the corrected/added parts in the corrected text
 function renderCorrectedWithBold(original, corrected) {
@@ -47,28 +48,18 @@ function renderCorrectedWithBold(original, corrected) {
   );
 }
 
-export function MistakeList({ mistakes, levelUp, studentText, mistakeHighlight }) {
+export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback }) {
   const { selectedMistake, setSelectedMistake, mistakeRefs } = mistakeHighlight;
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Show level-up card only when there are no mistakes
   if (!mistakes || mistakes.length === 0) {
-    if (!levelUp) return null;
-    
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="p-4 rounded-lg border-2 border-green-500 bg-green-50">
-          <div className="flex items-start mb-2">
-            <Icons.TrendingUp className="h-5 w-5 mr-2 text-green-600 mt-0.5" />
-            <h4 className="text-base font-semibold text-green-800">レベルアップ</h4>
-          </div>
-          <p className="text-sm text-gray-800 mt-2 leading-relaxed">{levelUp}</p>
-        </div>
-      </div>
-    );
+    // LevelUp is now displayed inside the score box (FeedbackDisplay)
+    return null;
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 relative">
       <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
         <Icons.AlertCircle className="h-5 w-5 mr-2 text-red-600" />
         改善点リスト
@@ -117,6 +108,30 @@ export function MistakeList({ mistakes, levelUp, studentText, mistakeHighlight }
             </div>
           </div>
         ))}
+      </div>
+      {/* Copy button at the bottom-right of the mistake list card */}
+      <div className="mt-4 flex justify-end">
+        <Tooltip content={copySuccess ? 'コピーしました！' : 'フィードバックをコピー'} showDelay={100} hideDelay={100} position="top-right">
+          <button
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(buildCopyText(studentText, feedback || { mistakes }));
+                setCopySuccess(true);
+                setTimeout(() => setCopySuccess(false), 2000);
+              } catch (err) {
+                console.error("Failed to copy:", err);
+              }
+            }}
+            className={`flex items-center justify-center px-3 py-3 rounded-lg transition-colors font-medium border ${
+              copySuccess
+                ? 'bg-green-600 hover:bg-green-700 text-white border-green-700'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700 border-gray-300'
+            }`}
+            aria-label={copySuccess ? 'コピーしました！' : 'フィードバックをコピー'}
+          >
+            <Icons.Copy className="h-5 w-5" />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

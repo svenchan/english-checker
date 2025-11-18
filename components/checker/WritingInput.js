@@ -4,9 +4,8 @@
 import { useState, useEffect } from "react";
 import { Icons } from "@/components/ui/Icons";
 
-export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, classCode, feedback }) {
+export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, classCode, feedback, onReset }) {
   const [cooldown, setCooldown] = useState(0);
-  const [copySuccess, setCopySuccess] = useState(false);
   const isTeacher = (classCode || "").toUpperCase() === "TEACHER";
   
   useEffect(() => {
@@ -19,7 +18,14 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  const handleCheckClick = () => {
+  const handlePrimaryClick = () => {
+    // If feedback exists, this button acts as "新しく書く"
+    if (feedback) {
+      if (cooldown > 0) return; // guarded by disabled too
+      onReset?.();
+      return;
+    }
+    // Otherwise this acts as "チェックする"
     onCheck();
     // Only start the 60s cooldown for non-teacher class codes
     if (!isTeacher) setCooldown(60);
@@ -31,35 +37,7 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
     }
   };
 
-  const handleCopyToClipboard = async () => {
-    let copyText = `【英文】\n${text}\n\n`;
-
-    if (feedback) {
-      copyText += `【スコア】\n${feedback.overallScore}点\n\n`;
-
-      if (feedback.mistakes && feedback.mistakes.length > 0) {
-        copyText += `【間違い】\n`;
-        feedback.mistakes.forEach((mistake, idx) => {
-          copyText += `\n${idx + 1}. ${mistake.original} → ${mistake.corrected}\n`;
-          copyText += `   説明: ${mistake.explanation}\n`;
-        });
-      } else {
-        copyText += `【間違い】\nなし - 完璧です！\n`;
-      }
-
-      if (feedback.levelUp) {
-        copyText += `\n【レベルアップ】\n${feedback.levelUp}\n`;
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(copyText);
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
+  // Copy action moved to MistakeList/FeedbackDisplay so it's near the results
 
   const countWords = (text) => {
     // Common Japanese loanwords to exclude
@@ -122,21 +100,9 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
       />
       
       <div className="mt-4 flex justify-end space-x-3">
-        {feedback && (
-          <button
-            onClick={handleCopyToClipboard}
-            className={`flex items-center justify-center px-3 py-3 rounded-lg transition-colors font-medium ${
-              copySuccess ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-700'
-            } text-white`}
-            title={copySuccess ? 'コピーしました！' : 'コピー'}
-          >
-            <Icons.Copy className="h-5 w-5" />
-          </button>
-        )}
-        
         <button
-          onClick={handleCheckClick}
-          disabled={isChecking || !text.trim() || isDisabled || cooldown > 0}
+          onClick={handlePrimaryClick}
+          disabled={feedback ? (isChecking || cooldown > 0) : (isChecking || !text.trim())}
           className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
           {isChecking ? (
@@ -144,11 +110,18 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               <span>チェック中...</span>
             </>
-          ) : cooldown > 0 ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              <span>再チェックまで {cooldown}s</span>
-            </>
+          ) : feedback ? (
+            cooldown > 0 ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>新しく書くまで {cooldown}s</span>
+              </>
+            ) : (
+              <>
+                <Icons.RefreshCw className="h-5 w-5" />
+                <span>新しく書く</span>
+              </>
+            )
           ) : (
             <>
               <Icons.Send className="h-5 w-5" />

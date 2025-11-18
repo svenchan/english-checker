@@ -20,27 +20,68 @@ export default function Page() {
   const mistakeRefs = useRef({});
 
   const highlightMistakes = () => {
-    const studentText = checker.studentText || "";
+    const text = checker.studentText || "";
     const mistakes = checker.feedback?.mistakes || [];
-    if (!mistakes || mistakes.length === 0) return studentText;
+    if (!mistakes || mistakes.length === 0) return text;
 
-    let highlightedText = studentText;
-    // preserve original indices so data-mistake-id matches refs in MistakeList
+    // Escape HTML to avoid injection; we'll inject safe spans around text slices
+    const escapeHtml = (s = "") =>
+      s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+
+    // Build all match ranges on the raw text first (avoid matching inside injected HTML)
     const indexed = mistakes.map((m, i) => ({ ...m, __originalIndex: i }));
-    const sorted = [...indexed].sort(
-      (a, b) => (b.original?.length || 0) - (a.original?.length || 0)
-    );
+    const ranges = [];
 
-    sorted.forEach((mistake) => {
-      if (!mistake.original) return;
-      const regex = new RegExp(sanitizeForRegex(mistake.original), "gi");
-      highlightedText = highlightedText.replace(
-        regex,
-        `<span class="bg-red-200 cursor-pointer hover:bg-red-300 transition-colors rounded px-1" data-mistake-id="${mistake.__originalIndex}">${mistake.original}</span>`
-      );
+    indexed.forEach((m) => {
+      const original = m.original || "";
+      if (!original) return;
+      const pattern = new RegExp(sanitizeForRegex(original), "gi");
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        // Guard against zero-length matches
+        if (match[0].length === 0) {
+          pattern.lastIndex += 1;
+          continue;
+        }
+        ranges.push({ start: match.index, end: match.index + match[0].length, id: m.__originalIndex });
+      }
     });
 
-    return highlightedText;
+    if (ranges.length === 0) return escapeHtml(text);
+
+    // Sort by start asc, and for identical start, by longer length desc
+    ranges.sort((a, b) => (a.start - b.start) || (b.end - b.start) - (a.end - a.start));
+
+    // Merge overlapping ranges by keeping the first (earliest/longest)
+    const merged = [];
+    for (const r of ranges) {
+      const last = merged[merged.length - 1];
+      if (!last || r.start >= last.end) {
+        merged.push({ ...r });
+      }
+      // If overlapping, skip r (we keep last)
+    }
+
+    // Build HTML from escaped text and injected spans
+    let html = "";
+    let pos = 0;
+    merged.forEach((r) => {
+      if (pos < r.start) {
+        html += escapeHtml(text.slice(pos, r.start));
+      }
+      const inner = escapeHtml(text.slice(r.start, r.end));
+      html += `<span class="bg-red-200 cursor-pointer hover:bg-red-300 transition-colors rounded px-1" data-mistake-id="${r.id}">${inner}</span>`;
+      pos = r.end;
+    });
+    if (pos < text.length) {
+      html += escapeHtml(text.slice(pos));
+    }
+    return html;
   };
 
   const handleTextClick = (e) => {
@@ -87,6 +128,7 @@ export default function Page() {
                 isDisabled={!!checker.feedback}
                 classCode={classCode}
                 feedback={checker.feedback}
+                onReset={checker.reset}
               />
 
               {checker.feedback && (
@@ -98,9 +140,9 @@ export default function Page() {
                   />
                   <MistakeList
                     mistakes={checker.feedback.mistakes}
-                    levelUp={checker.feedback.levelUp}
                     studentText={checker.studentText}
                     mistakeHighlight={mistakeHighlight}
+                    feedback={checker.feedback}
                   />
                 </>
               )}

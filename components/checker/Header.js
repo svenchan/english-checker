@@ -15,15 +15,6 @@ export function Header({ classCode, onLogout, onReset, hasFeedback }) {
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          {hasFeedback && (
-            <button
-              onClick={onReset}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors"
-            >
-              <Icons.RefreshCw className="h-4 w-4" />
-              <span>新しく書く</span>
-            </button>
-          )}
           <button
             onClick={onLogout}
             className="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
