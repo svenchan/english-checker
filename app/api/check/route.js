@@ -98,24 +98,29 @@ export async function POST(req) {
       }
       parsedFeedback = validateAndFixResponse(parsedFeedback);
 
-      // Log to Supabase
-      try {
-        const supabase = createServerClient();
-        const { error } = await supabase.from("writing_logs").insert({
-          student_id: body.studentId || null,
-          class_code: classCode,
-          prompt: prompt,
-          ai_response: responseText,
-          tokens_in: data.usage?.prompt_tokens || 0,
-          tokens_out: data.usage?.completion_tokens || 0,
-        });
+      // Log to Supabase (only if env is configured)
+      const hasSupabaseEnv = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (hasSupabaseEnv) {
+        try {
+          const supabase = createServerClient();
+          const { error } = await supabase.from("writing_logs").insert({
+            student_id: body.studentId || null,
+            class_code: classCode,
+            prompt: prompt,
+            ai_response: responseText,
+            tokens_in: data.usage?.prompt_tokens || 0,
+            tokens_out: data.usage?.completion_tokens || 0,
+          });
 
-        if (error) {
-          console.error("Supabase logging error:", error);
+          if (error) {
+            console.error("Supabase logging error:", error);
+          }
+        } catch (logError) {
+          console.error("Failed to log to Supabase:", logError);
+          // Don't fail the request if logging fails
         }
-      } catch (logError) {
-        console.error("Failed to log to Supabase:", logError);
-        // Don't fail the request if logging fails
+      } else {
+        console.warn("Supabase env not configured; skipping logging");
       }
 
       return NextResponse.json(parsedFeedback, { status: HTTP_STATUS.OK });
