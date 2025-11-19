@@ -1,10 +1,10 @@
 
-// * AI Prompt Templates - Optimized Version
+// AI Prompt Template for strict JSON-only feedback
 
 
 // CHANGED: Shortened from 60+ characters to ~40 characters
 // Saves ~5-10 tokens per request
-const SYSTEM_MESSAGE = "日本の中学生向け英作文チェッカー。JSON形式で回答。文法的に正しい英文は絶対に間違いとしない。文法エラーと綴りミスのみ訂正。日本語のみで回答。";
+const SYSTEM_MESSAGE = "日本の中学生向け英作文チェッカー。JSON形式で回答。文法的に正しい英文は絶対に間違いとしない。文法エラーと綴りミスのみ訂正。";
 
 // CHANGED: Balanced prompt - educational but not too verbose
 // Emphasizes clear explanations with grammar rules
@@ -19,31 +19,34 @@ function buildCheckPrompt(text) {
   
   return `生徒の英文: "${limitedText}"
 
-以下のJSON形式で返してください：
+出力仕様（JSONオブジェクトのみ、他の文字・コードフェンス不可）:
+- keys: mistakes(array), overallScore(number: 0-100), levelUp(string)
+- mistakes[].type は "grammar" | "vocabulary" | "spelling" のいずれか
+- ミスがなければ mistakes は [] にする
+
+出力例（値は例。必ず有効なJSONで返す）:
 {
   "mistakes": [
     {
-      "original": "間違った部分",
-      "corrected": "正しい英語",
-      "explanation": "なぜ間違いか、どの文法ルールに関係するか（例：英語は主語+動詞の順番、be動詞が必要、など）を1〜2文で説明",
-      "type": "grammar|vocabulary|spelling"
+      "original": "I go to school yesterday.",
+      "corrected": "I went to school yesterday.",
+      "explanation": "過去の出来事なので動詞は過去形にします。",
+      "type": "grammar"
     }
   ],
-  "overallScore": 0-100,
-  "levelUp": "より自然な表現と内容の追加や変更の提案のコメント"
+  "overallScore": 85,
+  "levelUp": "時制の一致を復習しましょう。短い英文でも主語と動詞の形を意識するとさらに良くなります。"
 }
 
-【絶対に守るルール】
-1. 文法的に正しい英文は絶対に間違いとしない
-2. 綴りミスと明確な文法エラーのみを指摘
-3. 語彙の置き換えは絶対にしない（例：「good」→「excellent」は禁止）
-4. スタイルや言い回しの改善は絶対にしない
+厳守ルール:
+1. 文法的に正しい英文は間違いとして出力しない
+2. 指摘は文法エラーと綴りミスのみ
+3. 内容の追加・変更、語彙の言い換え、より自然な表現提案は mistakes に含めない（levelUp に記載）
 
-explanationでは文法ルールを明確に説明（例：「英語は主語+動詞の構造」「be動詞が必要」など）
-level upでは、より自然な表現や情報の付け加えの例を提案するが、提案は必ず難しい単語使わない。
-完璧な英文はmistakes空配列、100点
-
-JSONのみ返してください。`;
+注意:
+- JSON以外の文字列やコードフェンスは出力しない
+- 値は日本語で構いませんが、キー名は必ず上記英語のまま
+`;
 }
 
 const GROQ_SETTINGS = {

@@ -28,13 +28,8 @@ export async function POST(req) {
       const apiKey = getApiKeyForClass(classCode);
       const prompt = buildCheckPrompt(text);
 
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
+      async function callGroq(options = { useJsonResponseFormat: true }) {
+        const body = {
           model: GROQ_SETTINGS.model,
           messages: [
             { role: "system", content: SYSTEM_MESSAGE },
@@ -42,12 +37,37 @@ export async function POST(req) {
           ],
           temperature: GROQ_SETTINGS.temperature,
           max_tokens: GROQ_SETTINGS.max_tokens,
-          response_format: GROQ_SETTINGS.response_format,
-        }),
-      });
+        };
+        if (options.useJsonResponseFormat) body.response_format = GROQ_SETTINGS.response_format;
+        return fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(body),
+        });
+      }
+
+      // First attempt: strict JSON response format
+      let response = await callGroq({ useJsonResponseFormat: true });
+
+      // If JSON generation failed, retry without response_format for resilience
+      if (!response.ok) {
+        const errFirst = await response.json().catch(() => ({}));
+        const msg = errFirst?.error?.message || "";
+        if (/failed\s*_?generation/i.test(msg) || /Failed to generate JSON/i.test(msg)) {
+          response = await callGroq({ useJsonResponseFormat: false });
+        } else {
+          if (response.status === 429) {
+            return NextResponse.json({ error: ERRORS.RATE_LIMIT_EXCEEDED }, { status: HTTP_STATUS.RATE_LIMIT });
+          }
+          throw new Error(msg || ERRORS.GROQ_API_ERROR);
+        }
+      }
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         if (response.status === 429) {
           return NextResponse.json({ error: ERRORS.RATE_LIMIT_EXCEEDED }, { status: HTTP_STATUS.RATE_LIMIT });
         }
@@ -55,11 +75,27 @@ export async function POST(req) {
       }
 
       const data = await response.json();
-      let responseText = data.choices[0].message.content;
+      let responseText = data.choices?.[0]?.message?.content || "";
 
-      responseText = responseText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      // Best-effort sanitization
+      if (typeof responseText === "string") {
+        responseText = responseText.replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
+      }
 
-      let parsedFeedback = JSON.parse(responseText);
+      // Try direct parse; if it fails, try to extract the first JSON object substring
+      let parsedFeedback;
+      try {
+        parsedFeedback = JSON.parse(responseText);
+      } catch (_) {
+        const first = responseText.indexOf("{");
+        const last = responseText.lastIndexOf("}");
+        if (first !== -1 && last !== -1 && last > first) {
+          const candidate = responseText.slice(first, last + 1);
+          parsedFeedback = JSON.parse(candidate);
+        } else {
+          throw new Error(ERRORS.GROQ_API_ERROR);
+        }
+      }
       parsedFeedback = validateAndFixResponse(parsedFeedback);
 
       // Log to Supabase
