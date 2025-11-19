@@ -37,17 +37,32 @@ export default function Page() {
     const indexed = mistakes.map((m, i) => ({ ...m, __originalIndex: i }));
     const ranges = [];
 
+    const buildPattern = (orig = "") => {
+      const trimmed = orig.trim();
+      if (!trimmed) return null;
+      // Single English word: enforce word boundaries to avoid matching inside other words
+      if (/^[A-Za-z]+$/.test(trimmed)) {
+        return new RegExp(`\\b${sanitizeForRegex(trimmed)}\\b`, "gi");
+      }
+      // Multi-word English phrase: collapse inner spaces and bound as a phrase
+      if (/^[A-Za-z]+(?:\s+[A-Za-z]+)+$/.test(trimmed)) {
+        const collapsed = trimmed
+          .split(/\s+/)
+          .map((w) => sanitizeForRegex(w))
+          .join("\\s+");
+        return new RegExp(`\\b${collapsed}\\b`, "gi");
+      }
+      // Fallback: plain escaped substring (for non-Latin chars, punctuation-including strings, etc.)
+      return new RegExp(sanitizeForRegex(trimmed), "gi");
+    };
+
     indexed.forEach((m) => {
       const original = m.original || "";
-      if (!original) return;
-      const pattern = new RegExp(sanitizeForRegex(original), "gi");
-      let match;
-      while ((match = pattern.exec(text)) !== null) {
-        // Guard against zero-length matches
-        if (match[0].length === 0) {
-          pattern.lastIndex += 1;
-          continue;
-        }
+      const pattern = buildPattern(original);
+      if (!pattern) return;
+      const match = pattern.exec(text);
+      if (match && match[0].length > 0) {
+        // Only highlight the first occurrence per mistake
         ranges.push({ start: match.index, end: match.index + match[0].length, id: m.__originalIndex });
       }
     });
