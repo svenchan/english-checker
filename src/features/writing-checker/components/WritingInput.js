@@ -2,11 +2,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Icons } from "@/components/ui/Icons";
+import { Icons } from "@/shared/components/ui/Icons";
+import {
+  COOLDOWN_SECONDS,
+  JAPANESE_LOANWORD_SET,
+  MAX_CHAR_COUNT,
+  TEACHER_CODE
+} from "../constants";
 
 export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, classCode, feedback, onReset }) {
   const [cooldown, setCooldown] = useState(0);
-  const isTeacher = (classCode || "").toUpperCase() === "TEACHER";
+  const isTeacher = (classCode || "").toUpperCase() === TEACHER_CODE;
   
   useEffect(() => {
     let interval;
@@ -28,11 +34,11 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
     // Otherwise this acts as "チェックする"
     onCheck();
     // Only start the 60s cooldown for non-teacher class codes
-    if (!isTeacher) setCooldown(60);
+    if (!isTeacher) setCooldown(COOLDOWN_SECONDS);
   };
 
   const handleTextChange = (newText) => {
-    if (newText.length <= 400) {
+    if (newText.length <= MAX_CHAR_COUNT) {
       onChange(newText);
     }
   };
@@ -40,13 +46,6 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
   // Copy action moved to MistakeList/FeedbackDisplay so it's near the results
 
   const countWords = (text) => {
-    // Common Japanese loanwords to exclude
-    const japaneseLoans = new Set([
-      'sushi', 'sake', 'kimono', 'karate', 'tsunami', 'emoji', 'anime', 'manga', 'karaoke',
-      'tofu', 'tempura', 'wasabi', 'origami', 'haiku', 'zen', 'karate', 'judo', 'sudoku',
-      'kamikaze', 'samurai', 'geisha', 'futon', 'tatami', 'tsunami', 'typhoon'
-    ]);
-    
     // Split text into words, preserving original case
     const rawWords = text.split(/\s+/).filter(word => word.length > 0);
     
@@ -59,7 +58,7 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
       const lowerWord = cleanWord.toLowerCase();
       
       // Exclude Japanese loanwords
-      if (japaneseLoans.has(lowerWord)) {
+      if (JAPANESE_LOANWORD_SET.has(lowerWord)) {
         return false;
       }
       

@@ -2,7 +2,7 @@
  * Validate and fix AI responses
  */
 
-function validateAndFixResponse(parsedFeedback) {
+export function validateAndFixResponse(parsedFeedback) {
   // Ensure required fields exist
   if (!parsedFeedback.mistakes) {
     parsedFeedback.mistakes = [];
@@ -33,7 +33,3 @@ function validateAndFixResponse(parsedFeedback) {
   
   return parsedFeedback;
 }
-
-module.exports = {
-  validateAndFixResponse
-};

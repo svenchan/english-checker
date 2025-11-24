@@ -1,7 +1,7 @@
 // components/checker/Header.js
 "use client";
 
-import { Icons } from "@/components/ui/Icons";
+import { Icons } from "@/shared/components/ui/Icons";
 
 export function Header({ classCode, onLogout, onReset, hasFeedback }) {
   return (

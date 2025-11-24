@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Icons } from "@/components/ui/Icons";
+import { Icons } from "@/shared/components/ui/Icons";
 
 export function LoginForm({ onLogin, error, isLoading }) {
   const [input, setInput] = useState("");

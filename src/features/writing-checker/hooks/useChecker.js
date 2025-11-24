@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { submitWritingCheck } from "../services/checkingService";
 
 export function useChecker(classCode, onAuthError) {
   const [studentText, setStudentText] = useState("");
@@ -15,23 +16,11 @@ export function useChecker(classCode, onAuthError) {
     setFeedback(null);
 
     try {
-      const res = await fetch("/api/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: studentText, classCode })
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const msg = errorData.error || "サーバーエラーが発生しました";
-        throw new Error(msg);
-      }
-
-      const parsed = await res.json();
+      const parsed = await submitWritingCheck({ text: studentText, classCode });
       setFeedback(parsed);
     } catch (err) {
       console.error("Error checking writing:", err);
-      if (err.message?.includes("無効なクラスコード")) {
+      if (err.status === 401 || err.message?.includes("無効なクラスコード")) {
         alert("クラスコードが正しくありません。もう一度ログインしてください。");
         onAuthError?.();
       } else {

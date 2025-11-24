@@ -3,8 +3,8 @@
 
 import { useState } from "react";
 import { getScoreColor, buildCopyText } from "@/lib/utils";
-import { Icons } from "@/components/ui/Icons";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { Icons } from "@/shared/components/ui/Icons";
+import { Tooltip } from "@/shared/components/ui/Tooltip";
 
 export function FeedbackDisplay({ feedback, studentText, mistakeHighlight }) {
   const { highlightMistakes, handleTextClick } = mistakeHighlight;

@@ -1,14 +1,12 @@
-
 // AI Prompt Template for strict JSON-only feedback
-
 
 // CHANGED: Shortened from 60+ characters to ~40 characters
 // Saves ~5-10 tokens per request
-const SYSTEM_MESSAGE = "日本の中学生向け英作文チェッカー。JSON形式で回答。文法的に正しい英文は絶対に間違いとしない。文法エラーと綴りミスのみ訂正。";
+export const SYSTEM_MESSAGE = "日本の中学生向け英作文チェッカー。JSON形式で回答。文法的に正しい英文は絶対に間違いとしない。文法エラーと綴りミスのみ訂正。";
 
 // CHANGED: Balanced prompt - educational but not too verbose
 // Emphasizes clear explanations with grammar rules
-function buildCheckPrompt(text) {
+export function buildCheckPrompt(text) {
   // NEW: Limit input to 500 characters to prevent huge prompts
   const limitedText = text.slice(0, 500);
   
@@ -49,7 +47,7 @@ function buildCheckPrompt(text) {
 `;
 }
 
-const GROQ_SETTINGS = {
+export const GROQ_SETTINGS = {
   model: "llama-3.3-70b-versatile",
   // CHANGED: Reduced from 0.5 to 0.3
   // Lower temperature = more consistent, focused responses
@@ -63,7 +61,7 @@ const GROQ_SETTINGS = {
 
 // NEW: Helper function to log token usage
 // Use this in your API call to monitor usage patterns
-function logTokenUsage(response, inputText) {
+export function logTokenUsage(response, inputText) {
   const usage = response.usage;
   console.log('📊 Token Usage:', {
     prompt: usage.prompt_tokens,
@@ -73,11 +71,3 @@ function logTokenUsage(response, inputText) {
     efficiency: `${(usage.total_tokens / inputText.length).toFixed(2)} tokens/char`
   });
 }
-
-
-module.exports = {
-  SYSTEM_MESSAGE,
-  buildCheckPrompt,
-  GROQ_SETTINGS,
-  logTokenUsage  // NEW: Export the logging helper
-};

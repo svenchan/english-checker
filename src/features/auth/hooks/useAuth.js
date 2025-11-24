@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { validateClassCodeRequest } from "../services/authService";
 
 export function useAuth() {
   const [classCode, setClassCode] = useState("");
@@ -19,41 +20,26 @@ export function useAuth() {
 
   const validateClassCode = async (code) => {
     const normalizedCode = code.trim().toUpperCase();
-    
+
     try {
       setIsLoading(true);
       setError("");
-      
-      // Make a simple request to validate the class code
-      const response = await fetch("/api/check", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: "test",
-          classCode: normalizedCode,
-        }),
-      });
+      await validateClassCodeRequest(normalizedCode);
 
-      if (!response.ok && response.status === 401) {
-        setError("クラスコードが見つかりません。もう一度お試しください。");
-        setIsLoading(false);
-        return false;
-      }
-
-      // Valid class code
       sessionStorage.setItem("classCode", normalizedCode);
       setClassCode(normalizedCode);
       setIsAuthenticated(true);
-      setError("");
-      setIsLoading(false);
       return true;
     } catch (err) {
       console.error("Validation error:", err);
-      setError("エラーが発生しました。もう一度お試しください。");
-      setIsLoading(false);
+      if (err.status === 401) {
+        setError("クラスコードが見つかりません。もう一度お試しください。");
+      } else {
+        setError(err.message || "エラーが発生しました。もう一度お試しください。");
+      }
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 

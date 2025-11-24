@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Icons } from "@/components/ui/Icons";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { Icons } from "@/shared/components/ui/Icons";
+import { Tooltip } from "@/shared/components/ui/Tooltip";
 import { getMistakeTypeLabel, getMistakeTypeColor, buildCopyText } from "@/lib/utils";
 
 // Bold only the corrected/added parts in the corrected text

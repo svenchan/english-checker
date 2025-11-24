@@ -2,13 +2,13 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { useChecker } from "@/hooks/useChecker";
-import { LoginForm } from "@/components/checker/LoginForm";
-import { Header } from "@/components/checker/Header";
-import { WritingInput } from "@/components/checker/WritingInput";
-import { FeedbackDisplay } from "@/components/checker/FeedbackDisplay";
-import { MistakeList } from "@/components/checker/MistakeList";
+import { useAuth } from "../features/auth/hooks/useAuth";
+import { useChecker } from "../features/writing-checker/hooks/useChecker";
+import { LoginForm } from "../features/auth/components/LoginForm";
+import { Header } from "../features/writing-checker/components/Header";
+import { WritingInput } from "../features/writing-checker/components/WritingInput";
+import { FeedbackDisplay } from "../features/writing-checker/components/FeedbackDisplay";
+import { MistakeList } from "../features/writing-checker/components/MistakeList";
 import { sanitizeForRegex } from "@/lib/utils";
 
 export default function Page() {

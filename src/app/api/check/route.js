@@ -1,11 +1,11 @@
 import path from "path";
 import { NextResponse } from "next/server";
 import { enqueue } from "./queue";
-import { getApiKeyForClass, isValidClassCode } from "../../../api/config/classCodeMap.js";
-import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "../../../api/config/checkWritingPrompt.js";
-import { ERRORS, HTTP_STATUS } from "../../../api/config/errors.js";
-import { validateAndFixResponse } from "../../../api/utils/responseValidator.js";
-import { createServerClient } from "@/lib/supabaseServer";
+import { getApiKeyForClass, isValidClassCode } from "@/config/classCodeMap";
+import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "@/config/prompts";
+import { ERRORS, HTTP_STATUS } from "@/config/errors";
+import { validateAndFixResponse } from "@/lib/validators";
+import { createServerClient } from "@/config/supabase";
 
 export async function POST(req) {
   try {

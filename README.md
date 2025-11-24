@@ -5,6 +5,12 @@ A next.js webapp  that uses AI to help students check their own work and underst
 
 Published on vercel app using supabase for logging mistakes and writing.
 
+## Development
+
+- `npm run dev` — start the Next.js dev server
+- `npm run build` — create a production build
+- `npm test` — run the smoke test suite (Node's built-in test runner)
+
 
 
 .
@@ -81,10 +87,6 @@ Published on vercel app using supabase for logging mistakes and writing.
 │
 ├── tests/                           # All tests organized by source
 │   ├── unit/
-│   │   └── checking.test.js
 │   └── integration/
-│       └── api.test.js
 │
-└── scripts/                         # Remove from root
-    ├── testHttpQueue.js
-    └── testQueue.js
+└── scripts/                         # Utility scripts live here
