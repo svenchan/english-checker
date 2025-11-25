@@ -10,8 +10,12 @@ const formatter = new Intl.DateTimeFormat("ja-JP", {
 });
 
 export function RequestList({ entries = [], selectedId, onSelect, isLoading }) {
+  const containScroll = (event) => {
+    event.stopPropagation();
+  };
+
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col">
+    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col min-h-0 overflow-hidden">
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-gray-500">最新リクエスト</p>
@@ -25,7 +29,11 @@ export function RequestList({ entries = [], selectedId, onSelect, isLoading }) {
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
+      <div
+        className="flex-1 min-h-0 overflow-y-auto divide-y divide-gray-50 overscroll-contain"
+        onWheel={containScroll}
+        onTouchMove={containScroll}
+      >
         {entries.length === 0 && !isLoading && (
           <div className="p-6 text-center text-gray-500">表示できる記録がありません。</div>
         )}
