@@ -1,6 +1,6 @@
 // src/features/auth/services/authService.js
 
-const CHECK_ENDPOINT = "/api/check";
+const VALIDATE_ENDPOINT = "/api/classcode/validate";
 
 /**
  * Validate a class code by making a minimal request to the checker API.
@@ -8,10 +8,10 @@ const CHECK_ENDPOINT = "/api/check";
  * @returns {Promise<void>}
  */
 export async function validateClassCodeRequest(classCode) {
-  const response = await fetch(CHECK_ENDPOINT, {
+  const response = await fetch(VALIDATE_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: "test", classCode })
+    body: JSON.stringify({ classCode })
   });
 
   if (response.status === 401) {
