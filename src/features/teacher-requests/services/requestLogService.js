@@ -2,15 +2,23 @@ const LOGS_ENDPOINT = "/api/logs";
 
 /**
  * Fetch teacher request logs from the server.
- * @param {{ classCode: string; limit?: number }} params
+ * @param {{ classCode: string; limit?: number; classFilters?: string[] }} params
  * @returns {Promise<import("../types/request.types").TeacherRequestLog[]>}
  */
-export async function fetchRequestLogs({ classCode, limit = 50 }) {
+export async function fetchRequestLogs({ classCode, limit = 50, classFilters = [] }) {
   if (!classCode) {
     throw new Error("クラスコードが必要です");
   }
 
-  const url = `${LOGS_ENDPOINT}?limit=${encodeURIComponent(limit)}`;
+  const params = new URLSearchParams({ limit: String(limit) });
+  classFilters
+    .map((filter) => filter?.toUpperCase())
+    .filter(Boolean)
+    .forEach((filter) => {
+      params.append("classFilter", filter);
+    });
+
+  const url = `${LOGS_ENDPOINT}?${params.toString()}`;
 
   const response = await fetch(url, {
     method: "GET",

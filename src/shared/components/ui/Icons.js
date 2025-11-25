@@ -67,5 +67,10 @@ export const Icons = {
       <path d="M12 2l2.09 6.26L20 9l-4.91 3.58L16.18 18 12 14.77 7.82 18l1.09-5.42L4 9l5.91-.74L12 2z"></path>
       <path d="M5 5l1 3.09L9 9l-3 2-1 3-1-3-3-2 3-1z" strokeWidth="1.5"></path>
     </svg>
+  ),
+  Filter: ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+    </svg>
   )
 };

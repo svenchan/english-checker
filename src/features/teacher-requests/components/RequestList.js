@@ -1,6 +1,7 @@
 "use client";
 
 import { Icons } from "@/shared/components/ui/Icons";
+import { ClassFilterDropdown } from "./ClassFilterDropdown";
 
 const formatter = new Intl.DateTimeFormat("ja-JP", {
   month: "short",
@@ -9,24 +10,41 @@ const formatter = new Intl.DateTimeFormat("ja-JP", {
   minute: "2-digit"
 });
 
-export function RequestList({ entries = [], selectedId, onSelect, isLoading }) {
+export function RequestList({
+  entries = [],
+  selectedId,
+  onSelect,
+  isLoading,
+  filterOptions = [],
+  selectedFilters = [],
+  onFilterChange
+}) {
   const containScroll = (event) => {
     event.stopPropagation();
   };
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 h-full flex flex-col min-h-0 overflow-hidden">
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+      <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-gray-500">最新リクエスト</p>
           <h2 className="text-xl font-semibold">{entries.length} 件</h2>
         </div>
-        {isLoading && (
-          <div className="flex items-center text-blue-600 text-sm">
-            <Icons.Loader className="h-4 w-4 animate-spin mr-2" />
-            更新中
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {filterOptions.length > 0 && (
+            <ClassFilterDropdown
+              options={filterOptions}
+              selectedValues={selectedFilters}
+              onChange={onFilterChange}
+            />
+          )}
+          {isLoading && (
+            <div className="flex items-center text-blue-600 text-sm">
+              <Icons.Loader className="h-4 w-4 animate-spin mr-2" />
+              更新中
+            </div>
+          )}
+        </div>
       </div>
 
       <div

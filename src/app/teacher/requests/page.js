@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { LoginForm } from "@/features/auth/components/LoginForm";
@@ -7,9 +8,15 @@ import { Header } from "@/features/writing-checker/components/Header";
 import { useRequestLogs } from "@/features/teacher-requests/hooks/useRequestLogs";
 import { RequestList } from "@/features/teacher-requests/components/RequestList";
 import { RequestDetail } from "@/features/teacher-requests/components/RequestDetail";
+import { CLASSROOM_CODES } from "@/config/classroomCodes";
 
 export default function TeacherRequestsPage() {
   const { classCode, isAuthenticated, login, logout, error, isLoading } = useAuth();
+  const [classFilters, setClassFilters] = useState([]);
+  const filterOptions = useMemo(
+    () => CLASSROOM_CODES.map((code) => ({ value: code, label: code })),
+    []
+  );
   const {
     logs,
     selectedLog,
@@ -17,7 +24,7 @@ export default function TeacherRequestsPage() {
     isLoading: isLogsLoading,
     error: logsError,
     reload
-  } = useRequestLogs(classCode, { limit: 100 });
+  } = useRequestLogs(classCode, { limit: 100, classFilters });
 
   if (!isAuthenticated) {
     return <LoginForm onLogin={login} error={error} isLoading={isLoading} />;
@@ -71,7 +78,15 @@ export default function TeacherRequestsPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-6 flex-1 min-h-0 overflow-hidden">
-          <RequestList entries={logs} selectedId={selectedLog?.id} onSelect={selectLog} isLoading={isLogsLoading} />
+          <RequestList
+            entries={logs}
+            selectedId={selectedLog?.id}
+            onSelect={selectLog}
+            isLoading={isLogsLoading}
+            filterOptions={filterOptions}
+            selectedFilters={classFilters}
+            onFilterChange={setClassFilters}
+          />
           <RequestDetail entry={selectedLog} />
         </div>
       </main>

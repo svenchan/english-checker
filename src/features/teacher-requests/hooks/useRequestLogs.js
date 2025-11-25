@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchRequestLogs } from "../services/requestLogService";
 
-export function useRequestLogs(classCode, { limit = 50 } = {}) {
+export function useRequestLogs(classCode, { limit = 50, classFilters = [] } = {}) {
   const [logs, setLogs] = useState([]);
   const [selectedLogId, setSelectedLogId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,18 +22,16 @@ export function useRequestLogs(classCode, { limit = 50 } = {}) {
     setError("");
 
     try {
-      const data = await fetchRequestLogs({ classCode, limit });
+  const data = await fetchRequestLogs({ classCode, limit, classFilters });
       setLogs(data);
-      if (data.length > 0) {
-        setSelectedLogId((prev) => prev ?? data[0].id);
-      }
+      setSelectedLogId(data[0]?.id ?? null);
     } catch (err) {
       console.error("Failed to load request logs", err);
       setError(err.message || "ログの取得に失敗しました");
     } finally {
       setIsLoading(false);
     }
-  }, [classCode, isTeacher, limit]);
+  }, [classCode, isTeacher, limit, JSON.stringify(classFilters)]);
 
   useEffect(() => {
     loadLogs();

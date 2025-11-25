@@ -1,23 +1,22 @@
+import { CLASSROOM_CODES } from "./classroomCodes";
+
 /**
  * Class Code to API Key Mapping
  */
 
-export const CLASS_CODE_MAP = {
-  'CLASS11': process.env.GROQ_API_KEY_11,
-  'CLASS12': process.env.GROQ_API_KEY_12,
-  'CLASS13': process.env.GROQ_API_KEY_13,
-  'CLASS21': process.env.GROQ_API_KEY_21,
-  'CLASS22': process.env.GROQ_API_KEY_22,
-  'CLASS23': process.env.GROQ_API_KEY_23,
-  'CLASS31': process.env.GROQ_API_KEY_31,
-  'CLASS32': process.env.GROQ_API_KEY_32,
-  'CLASS33': process.env.GROQ_API_KEY_33,
-  'TEACHER': process.env.GROQ_API_KEY_TEACHER,
-  // Add more classes here as needed
-};
+function getEnvKeyForClass(code) {
+  if (code === "TEACHER") return "GROQ_API_KEY_TEACHER";
+  return `GROQ_API_KEY_${code.replace("CLASS", "")}`;
+}
 
-export function isValidClassCode(code) {
-  return code.toUpperCase() in CLASS_CODE_MAP;
+export const CLASS_CODE_MAP = CLASSROOM_CODES.reduce((map, code) => {
+  const envKey = getEnvKeyForClass(code);
+  map[code] = process.env[envKey];
+  return map;
+}, {});
+
+export function isValidClassCode(code = "") {
+  return CLASS_CODE_MAP.hasOwnProperty(code.toUpperCase());
 }
 
 export function getApiKeyForClass(code) {
@@ -29,5 +28,5 @@ export function getApiKeyForClass(code) {
 }
 
 export function getAllClassCodes() {
-  return Object.keys(CLASS_CODE_MAP);
+  return [...CLASSROOM_CODES];
 }

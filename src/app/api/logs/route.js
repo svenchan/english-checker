@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/config/supabase";
+import { isValidClassCode } from "@/config/classCodeMap";
 import { parseAiResponseString, extractStudentTextFromPrompt } from "@/features/teacher-requests/utils/logParsers";
 
 const MAX_LIMIT = 200;
@@ -21,14 +22,22 @@ export async function GET(req) {
   const limit = Number.isFinite(limitParam)
     ? Math.min(Math.max(Math.floor(limitParam), 1), MAX_LIMIT)
     : DEFAULT_LIMIT;
+  const filterValues = searchParams.getAll("classFilter").map((value) => value?.trim().toUpperCase()).filter(Boolean);
+  const validFilters = [...new Set(filterValues.filter((value) => isValidClassCode(value)))];
 
   try {
     const supabase = createServerClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from("writing_logs")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(limit);
+
+    if (validFilters.length > 0) {
+      query = query.in("class_code", validFilters);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw error;
