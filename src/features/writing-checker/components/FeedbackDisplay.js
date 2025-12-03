@@ -7,7 +7,7 @@ import { Icons } from "@/shared/components/ui/Icons";
 import { Tooltip } from "@/shared/components/ui/Tooltip";
 
 export function FeedbackDisplay({ feedback, studentText, mistakeHighlight }) {
-  const { highlightMistakes, handleTextClick } = mistakeHighlight;
+  const { highlightedSegments, handleHighlightClick, selectedMistake } = mistakeHighlight;
 
   const hasNoMistakes = (feedback?.mistakes?.length || 0) === 0;
   const levelUp = feedback?.levelUp;
@@ -69,11 +69,37 @@ export function FeedbackDisplay({ feedback, studentText, mistakeHighlight }) {
           <h3 className="text-lg font-semibold text-gray-800 mb-3">
             間違いをチェック(赤い部分をクリック)
           </h3>
-          <div
-            className="p-4 bg-gray-50 rounded-lg text-lg leading-relaxed border border-gray-200"
-            dangerouslySetInnerHTML={{ __html: highlightMistakes() }}
-            onClick={handleTextClick}
-          />
+          <div className="p-4 bg-gray-50 rounded-lg text-lg leading-relaxed border border-gray-200 whitespace-pre-wrap break-words">
+            {highlightedSegments && highlightedSegments.length > 0 ? (
+              highlightedSegments.map((segment, index) => {
+                if (segment.type === "mistake") {
+                  const isActive = selectedMistake === segment.mistakeId;
+                  return (
+                    <button
+                      key={`mistake-${segment.mistakeId}-${index}`}
+                      type="button"
+                      onClick={() => handleHighlightClick(segment.mistakeId)}
+                      className={`inline border-none px-1 rounded transition-colors whitespace-pre-wrap focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
+                        isActive
+                          ? "bg-blue-200 text-blue-900"
+                          : "bg-red-200 text-red-900 hover:bg-red-300"
+                      }`}
+                    >
+                      {segment.text}
+                    </button>
+                  );
+                }
+
+                return (
+                  <span key={`text-${index}`}>
+                    {segment.text}
+                  </span>
+                );
+              })
+            ) : (
+              <span>{studentText || ""}</span>
+            )}
+          </div>
         </div>
       )}
     </div>

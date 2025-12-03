@@ -90,20 +90,22 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback 
             <div className="space-y-2 mt-3">
               <div>
                 <p className="text-xs text-gray-600 mb-1">✕ 間違い</p>
-                <p className="text-base font-medium text-red-600 bg-red-50 px-3 py-2 rounded">
+                <p className="text-base font-medium text-red-600 bg-red-50 px-3 py-2 rounded whitespace-pre-wrap break-words">
                   {mistake.original}
                 </p>
               </div>
 
               <div>
                 <p className="text-xs text-gray-600 mb-1">✓ 正しい英語</p>
-                <p className="text-base font-medium text-green-600 bg-green-50 px-3 py-2 rounded">
+                <p className="text-base font-medium text-green-600 bg-green-50 px-3 py-2 rounded whitespace-pre-wrap break-words">
                   {renderCorrectedWithBold(mistake.original, mistake.corrected)}
                 </p>
               </div>
 
               <div className="pt-2 border-t border-gray-200">
-                <p className="text-sm text-gray-800"><strong>説明:</strong> {mistake.explanation}</p>
+                <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">
+                  <strong>説明:</strong> {mistake.explanation}
+                </p>
               </div>
             </div>
           </div>
