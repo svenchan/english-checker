@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/unit/smoke.test.mjs"
+    "test": "node --test \"tests/unit/**/*.test.mjs\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.81.1",
@@ -16,5 +16,8 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "sanitize-html": "^2.17.0"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.0"
   }
 }

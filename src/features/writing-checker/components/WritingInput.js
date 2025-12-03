@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { sanitizeClientInput } from "@/lib/clientSanitize";
 import { Icons } from "@/shared/components/ui/Icons";
 import {
   COOLDOWN_SECONDS,
@@ -12,6 +13,7 @@ import {
 
 export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, classCode, feedback, onReset }) {
   const [cooldown, setCooldown] = useState(0);
+  const [inputWarning, setInputWarning] = useState("");
   const isTeacher = (classCode || "").toUpperCase() === TEACHER_CODE;
   
   useEffect(() => {
@@ -38,9 +40,21 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
   };
 
   const handleTextChange = (newText) => {
-    if (newText.length <= MAX_CHAR_COUNT) {
-      onChange(newText);
+    const sanitizedText = sanitizeClientInput(newText);
+    let warningMessage = "";
+
+    if (sanitizedText !== newText) {
+      warningMessage = "HTMLタグや特殊文字は自動的に削除されます。";
     }
+
+    let finalText = sanitizedText;
+    if (sanitizedText.length > MAX_CHAR_COUNT) {
+      finalText = sanitizedText.slice(0, MAX_CHAR_COUNT);
+      warningMessage = "400文字以内にしてください。";
+    }
+
+    setInputWarning(warningMessage);
+    onChange(finalText);
   };
 
   // Copy action moved to MistakeList/FeedbackDisplay so it's near the results
@@ -97,6 +111,11 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
         className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
         disabled={isChecking || isDisabled}
       />
+      {inputWarning && (
+        <p className="mt-2 text-sm text-amber-600" role="alert">
+          {inputWarning}
+        </p>
+      )}
       
       <div className="mt-4 flex justify-end space-x-3">
         <button
