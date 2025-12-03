@@ -1,4 +1,3 @@
-import path from "path";
 import { NextResponse } from "next/server";
 import { enqueue } from "./queue";
 import { getApiKeyForClass, isValidClassCode } from "@/config/classCodeMap";
@@ -6,15 +5,22 @@ import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "@/config/prompt
 import { ERRORS, HTTP_STATUS } from "@/config/errors";
 import { validateAndFixResponse } from "@/lib/validators";
 import { createServerClient } from "@/config/supabase";
+import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
+import { sanitizeInput, sanitizeClassCode } from "@/lib/sanitize";
 
 export async function POST(req) {
   try {
     const result = await enqueue(req, async (r) => {
-      const body = await r.json();
-      const { text, classCode } = body;
+      const body = await r.json().catch(() => ({}));
+      const text = sanitizeInput(body?.text ?? "");
+      const classCode = sanitizeClassCode(body?.classCode ?? "");
 
       if (!text) {
         return NextResponse.json({ error: ERRORS.NO_TEXT }, { status: HTTP_STATUS.BAD_REQUEST });
+      }
+
+      if (text.length > MAX_CHAR_COUNT) {
+        return NextResponse.json({ error: ERRORS.TEXT_TOO_LONG }, { status: HTTP_STATUS.BAD_REQUEST });
       }
 
       if (!classCode) {
@@ -25,8 +31,8 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.INVALID_CLASS_CODE }, { status: HTTP_STATUS.UNAUTHORIZED });
       }
 
-      const apiKey = getApiKeyForClass(classCode);
-      const prompt = buildCheckPrompt(text);
+  const apiKey = getApiKeyForClass(classCode);
+  const prompt = buildCheckPrompt(text);
 
       async function callGroq(options = { useJsonResponseFormat: true }) {
         const body = {
@@ -103,8 +109,9 @@ export async function POST(req) {
       if (hasSupabaseEnv) {
         try {
           const supabase = createServerClient();
+          const sanitizedStudentId = sanitizeInput(body?.studentId ?? "") || null;
           const { error } = await supabase.from("writing_logs").insert({
-            student_id: body.studentId || null,
+            student_id: sanitizedStudentId,
             class_code: classCode,
             prompt: prompt,
             ai_response: responseText,

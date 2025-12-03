@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { buildCheckPrompt } from "../../src/config/prompts.js";
 import { validateAndFixResponse } from "../../src/lib/validators.js";
 import { extractStudentTextFromPrompt, parseAiResponseString } from "../../src/features/teacher-requests/utils/logParsers.js";
+import { sanitizeInput } from "../../src/lib/sanitize.js";
 
 function generateSampleText(length = 600) {
   return Array.from({ length }, (_, idx) => String.fromCharCode(65 + (idx % 26))).join("");
@@ -69,4 +70,10 @@ test("parseAiResponseString cleans code fences and validates shape", () => {
   assert.equal(parsed.overallScore, 100, "Perfect submission should normalize to 100");
   assert.deepEqual(parsed.mistakes, []);
   assert.equal(parsed.levelUp, "keep going");
+});
+
+test("sanitizeInput strips HTML tags and scripts", () => {
+  const unsafe = '<script>alert("x")</script><div>Hello <b>world</b>!</div>';
+  const sanitized = sanitizeInput(unsafe);
+  assert.equal(sanitized, "Hello world!");
 });

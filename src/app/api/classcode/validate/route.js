@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { isValidClassCode } from "@/config/classCodeMap";
 import { ERRORS, HTTP_STATUS } from "@/config/errors";
+import { sanitizeClassCode } from "@/lib/sanitize";
 
 export async function POST(req) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const classCode = body?.classCode?.toUpperCase?.();
+  const body = await req.json().catch(() => ({}));
+  const classCode = sanitizeClassCode(body?.classCode ?? "");
 
     if (!classCode) {
       return NextResponse.json({ error: ERRORS.NO_CLASS_CODE }, { status: HTTP_STATUS.BAD_REQUEST });
