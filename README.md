@@ -168,9 +168,9 @@ CREATE TABLE public.users (
 );
 CREATE TABLE public.writing_logs (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  student_id uuid NOT NULL,
-  class_id uuid NOT NULL,
-  school_id uuid NOT NULL,
+  student_id uuid,
+  class_id uuid,
+  school_id uuid,
   prompt text,
   ai_response text,
   tokens_in integer,

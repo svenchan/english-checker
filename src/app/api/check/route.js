@@ -117,7 +117,6 @@ export async function POST(req) {
       const canLogGuest = hasSupabaseUrl && hasServiceRole;
       const canLogStudent = hasSupabaseUrl && hasAnonKey;
       const baseLogEntry = {
-        class_code: classCode,
         prompt,
         ai_response: responseText,
         tokens_in: tokensIn,
@@ -150,7 +149,7 @@ export async function POST(req) {
             };
 
             await supabase.from("writing_logs").insert(logEntry);
-          } else if (hasGuestId && canLogGuest) {
+          } else if (guestSessionId && canLogGuest) {
             const supabase = createServerClient();
             const logEntry = {
               ...baseLogEntry,
