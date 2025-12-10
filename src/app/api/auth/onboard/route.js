@@ -19,6 +19,150 @@ function extractBearerToken(req) {
   return match ? match[1]?.trim() : null;
 }
 
+async function getProfileForAuthId(supabase, authId) {
+  if (!authId) {
+    return {
+      onboarded: false,
+      authId: null,
+      userId: null,
+      role: null,
+      studentId: null,
+      teacherId: null,
+      classId: null,
+      schoolId: null,
+      firstName: "",
+      lastName: "",
+      email: ""
+    };
+  }
+
+  const { data: userRecord, error: userError } = await supabase
+    .from("users")
+    .select("id, role, first_name, last_name, email")
+    .eq("auth_id", authId)
+    .maybeSingle();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!userRecord) {
+    return {
+      onboarded: false,
+      authId,
+      userId: null,
+      role: null,
+      studentId: null,
+      teacherId: null,
+      classId: null,
+      schoolId: null,
+      firstName: "",
+      lastName: "",
+      email: ""
+    };
+  }
+
+  const studentRecord = await fetchStudentRecord(supabase, userRecord.id, authId);
+  const teacherRecord = await fetchTeacherRecord(supabase, userRecord.id, authId);
+
+  const hasStudent = Boolean(studentRecord?.id);
+  const hasTeacher = Boolean(teacherRecord?.id);
+
+  return {
+    onboarded: hasStudent || hasTeacher,
+    authId,
+    userId: userRecord.id,
+    role: userRecord.role,
+    studentId: studentRecord?.id ?? null,
+    teacherId: teacherRecord?.id ?? null,
+    classId: studentRecord?.class_id ?? null,
+    schoolId: studentRecord?.school_id ?? teacherRecord?.school_id ?? null,
+    firstName: userRecord.first_name || "",
+    lastName: userRecord.last_name || "",
+    email: userRecord.email || ""
+  };
+}
+
+async function fetchStudentRecord(supabase, primaryUserId, fallbackId) {
+  return fetchRecordWithColumns(supabase, "students", ["id", "class_id", "school_id", "user_id"], primaryUserId, fallbackId);
+}
+
+async function fetchTeacherRecord(supabase, primaryUserId, fallbackId) {
+  return fetchRecordWithColumns(supabase, "teachers", ["id", "school_id", "user_id"], primaryUserId, fallbackId);
+}
+
+async function fetchRecordWithColumns(supabase, table, columns, primaryUserId, fallbackId) {
+  if (!primaryUserId && !fallbackId) {
+    return null;
+  }
+
+  const idsToTry = [primaryUserId, fallbackId].filter(Boolean);
+  for (const id of idsToTry) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns.join(", "))
+      .eq("user_id", id)
+      .maybeSingle();
+
+    if (error && error.code !== "PGRST116") {
+      throw error;
+    }
+
+    if (data) {
+      return data;
+    }
+  }
+
+  return null;
+}
+
+async function getAuthenticatedUser(req, supabase) {
+  const accessToken = extractBearerToken(req);
+
+  if (!accessToken) {
+    return { error: jsonError("Not authenticated. Please log in first.", HTTP_STATUS.UNAUTHORIZED) };
+  }
+
+  const { data: userData, error: authError } = await supabase.auth.getUser(accessToken);
+
+  if (authError || !userData?.user) {
+    return {
+      error: jsonError(
+        "Not authenticated. Please log in first.",
+        HTTP_STATUS.UNAUTHORIZED,
+        authError || "No user found"
+      )
+    };
+  }
+
+  return { accessToken, authUser: userData.user };
+}
+
+export async function GET(req) {
+  try {
+    const supabase = createServerClient();
+    const { error, authUser } = await getAuthenticatedUser(req, supabase);
+
+    if (error) {
+      return error;
+    }
+
+    const profile = await getProfileForAuthId(supabase, authUser.id);
+
+    return NextResponse.json({
+      success: true,
+      profile,
+      needsOnboarding: !profile.onboarded
+    });
+  } catch (err) {
+    console.error("Failed to load onboarding profile:", err);
+    return NextResponse.json(
+      { error: "サーバーエラーが発生しました", details: err.message },
+      { status: HTTP_STATUS.SERVER_ERROR }
+    );
+  }
+}
+
 export async function POST(req) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -86,40 +230,28 @@ export async function POST(req) {
     }
 
     const supabase = createServerClient();
-    const accessToken = extractBearerToken(req);
+    const { error, authUser } = await getAuthenticatedUser(req, supabase);
 
-    if (!accessToken) {
-      return jsonError("Not authenticated. Please log in first.", HTTP_STATUS.UNAUTHORIZED);
+    if (error) {
+      return error;
     }
 
-    const { data: userData, error: authError } = await supabase.auth.getUser(accessToken);
-
-    if (authError || !userData?.user) {
-      return jsonError("Not authenticated. Please log in first.", HTTP_STATUS.UNAUTHORIZED, authError || "No user found");
-    }
-
-    const authId = userData.user.id;
+    const authId = authUser.id;
     const schoolId = process.env.NEXT_PUBLIC_SCHOOL_ID;
 
     if (!schoolId) {
       return jsonError("School ID is not configured.", HTTP_STATUS.SERVER_ERROR);
     }
 
-    const { data: existingUser, error: fetchError } = await supabase
-      .from("users")
-      .select("id, role")
-      .eq("auth_id", authId)
-      .maybeSingle();
+    const existingProfile = await getProfileForAuthId(supabase, authId);
 
-    if (fetchError) {
-      return jsonError("Failed to check onboarding status.", HTTP_STATUS.SERVER_ERROR, fetchError);
-    }
-
-    if (existingUser) {
+    if (existingProfile.onboarded) {
       return NextResponse.json({
+        success: true,
         alreadyOnboarded: true,
-        role: existingUser.role,
-        message: "User already onboarded."
+        message: "User already onboarded.",
+        profile: existingProfile,
+        needsOnboarding: false
       });
     }
 
@@ -140,14 +272,20 @@ export async function POST(req) {
     }
 
     const userId = newUser.id;
+    let studentId = null;
+    let teacherId = null;
 
     if (role === "student") {
-      const { error: studentInsertError } = await supabase.from("students").insert({
-        user_id: userId,
-        class_id: null,
-        school_id: schoolId,
-        student_number: null
-      });
+      const { data: studentRow, error: studentInsertError } = await supabase
+        .from("students")
+        .insert({
+          user_id: userId,
+          class_id: null,
+          school_id: schoolId,
+          student_number: null
+        })
+        .select("id, school_id, class_id")
+        .single();
 
       if (studentInsertError) {
         const { error: cleanupError } = await supabase.from("users").delete().eq("id", userId);
@@ -156,11 +294,17 @@ export async function POST(req) {
         }
         return jsonError("Failed to create student record.", HTTP_STATUS.SERVER_ERROR, studentInsertError);
       }
+
+      studentId = studentRow?.id ?? null;
     } else {
-      const { error: teacherInsertError } = await supabase.from("teachers").insert({
-        user_id: userId,
-        school_id: schoolId
-      });
+      const { data: teacherRow, error: teacherInsertError } = await supabase
+        .from("teachers")
+        .insert({
+          user_id: userId,
+          school_id: schoolId
+        })
+        .select("id, school_id")
+        .single();
 
       if (teacherInsertError) {
         const { error: cleanupError } = await supabase.from("users").delete().eq("id", userId);
@@ -169,12 +313,20 @@ export async function POST(req) {
         }
         return jsonError("Failed to create teacher record.", HTTP_STATUS.SERVER_ERROR, teacherInsertError);
       }
+
+      teacherId = teacherRow?.id ?? null;
     }
+
+    const profile = await getProfileForAuthId(supabase, authId);
 
     return NextResponse.json({
       success: true,
       role,
       userId,
+      studentId,
+      teacherId,
+      profile,
+      needsOnboarding: !profile.onboarded,
       message: "Onboarding completed successfully."
     });
   } catch (error) {

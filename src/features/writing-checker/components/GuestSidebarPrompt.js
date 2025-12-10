@@ -1,38 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { getSupabaseBrowserClient } from "@/config/supabaseBrowserClient";
+import { useSupabaseAuthActions } from "@/features/auth/hooks/useSupabaseAuthActions";
 
 export function GuestSidebarPrompt({ isSessionLoading = false }) {
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [error, setError] = useState("");
+  const [localError, setLocalError] = useState("");
+  const { signInWithGoogle, isSigningIn, error } = useSupabaseAuthActions();
 
   const handleSignIn = async () => {
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) {
-      setError("Supabase is not configured.");
-      return;
-    }
-
+    setLocalError("");
     try {
-      setError("");
-      setIsSigningIn(true);
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: typeof window !== "undefined" ? window.location.href : undefined
-        }
-      });
-
-      if (oauthError) {
-        throw oauthError;
-      }
+      await signInWithGoogle();
     } catch (err) {
-      console.error("Google sign-in failed", err);
-      setError(err.message || "ログインに失敗しました。");
-      setIsSigningIn(false);
+      setLocalError(err.message || "ログインに失敗しました。");
     }
   };
+
+  const displayError = localError || error;
 
   return (
     <div className="flex h-full max-h-screen flex-col bg-white">
@@ -53,7 +37,7 @@ export function GuestSidebarPrompt({ isSessionLoading = false }) {
         >
           {isSigningIn || isSessionLoading ? "Preparing Google sign-in..." : "Sign in with Google"}
         </button>
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {displayError && <p className="text-xs text-red-600">{displayError}</p>}
       </div>
     </div>
   );

@@ -2,17 +2,16 @@ const LOGS_ENDPOINT = "/api/logs";
 
 /**
  * Fetch teacher request logs from the server.
- * @param {{ classCode: string; limit?: number; classFilters?: string[] }} params
- * @returns {Promise<import("../types/request.types").TeacherRequestLog[]>}
+ * @param {{ accessToken: string; limit?: number; classFilters?: string[] }} params
+ * @returns {Promise<{ entries: import("../types/request.types").TeacherRequestLog[]; filterOptions: { value: string; label: string }[] }>}
  */
-export async function fetchRequestLogs({ classCode, limit = 50, classFilters = [] }) {
-  if (!classCode) {
-    throw new Error("クラスコードが必要です");
+export async function fetchRequestLogs({ accessToken, limit = 50, classFilters = [] }) {
+  if (!accessToken) {
+    throw new Error("認証が必要です");
   }
 
   const params = new URLSearchParams({ limit: String(limit) });
   classFilters
-    .map((filter) => filter?.toUpperCase())
     .filter(Boolean)
     .forEach((filter) => {
       params.append("classFilter", filter);
@@ -23,7 +22,7 @@ export async function fetchRequestLogs({ classCode, limit = 50, classFilters = [
   const response = await fetch(url, {
     method: "GET",
     headers: {
-      "x-class-code": classCode
+      Authorization: `Bearer ${accessToken}`
     }
   });
 
@@ -36,5 +35,13 @@ export async function fetchRequestLogs({ classCode, limit = 50, classFilters = [
     throw error;
   }
 
-  return payload?.data || [];
+  const filterOptions = (payload?.meta?.classFilters || []).map((option) => ({
+    value: String(option.id ?? option.value ?? ""),
+    label: option.label || option.name || String(option.id ?? option.value ?? "クラス")
+  }));
+
+  return {
+    entries: payload?.data || [],
+    filterOptions
+  };
 }
