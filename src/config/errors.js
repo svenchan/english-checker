@@ -7,6 +7,8 @@ export const ERRORS = {
   TEXT_TOO_LONG: 'テキストは400文字以内で入力してください',
   NO_CLASS_CODE: 'クラスコードが必要です',
   INVALID_CLASS_CODE: '無効なクラスコードです',
+  MISSING_IDENTIFIER: 'studentId か guestSessionId を指定してください',
+  CONFLICTING_IDENTIFIERS: 'studentId と guestSessionId を同時に送信できません',
   GROQ_API_ERROR: 'AI サービスでエラーが発生しました',
   SERVER_ERROR: 'サーバーエラーが発生しました',
   RATE_LIMIT_EXCEEDED: '使いすぎです。少し待ってからもう一度試してください',

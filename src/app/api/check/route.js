@@ -14,6 +14,10 @@ export async function POST(req) {
       const body = await r.json().catch(() => ({}));
       const text = sanitizeInput(body?.text ?? "");
       const classCode = sanitizeClassCode(body?.classCode ?? "");
+      const studentId = sanitizeInput(body?.studentId ?? "");
+      const guestSessionId = sanitizeInput(body?.guestSessionId ?? "");
+      const hasStudentId = Boolean(studentId);
+      const hasGuestId = Boolean(guestSessionId);
 
       if (!text) {
         return NextResponse.json({ error: ERRORS.NO_TEXT }, { status: HTTP_STATUS.BAD_REQUEST });
@@ -31,8 +35,16 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.INVALID_CLASS_CODE }, { status: HTTP_STATUS.UNAUTHORIZED });
       }
 
-  const apiKey = getApiKeyForClass(classCode);
-  const prompt = buildCheckPrompt(text);
+      if (!hasStudentId && !hasGuestId) {
+        return NextResponse.json({ error: ERRORS.MISSING_IDENTIFIER }, { status: HTTP_STATUS.BAD_REQUEST });
+      }
+
+      if (hasStudentId && hasGuestId) {
+        return NextResponse.json({ error: ERRORS.CONFLICTING_IDENTIFIERS }, { status: HTTP_STATUS.BAD_REQUEST });
+      }
+
+      const apiKey = getApiKeyForClass(classCode);
+      const prompt = buildCheckPrompt(text);
 
       async function callGroq(options = { useJsonResponseFormat: true }) {
         const body = {
@@ -82,6 +94,8 @@ export async function POST(req) {
 
       const data = await response.json();
       let responseText = data.choices?.[0]?.message?.content || "";
+      const tokensIn = data.usage?.prompt_tokens || 0;
+      const tokensOut = data.usage?.completion_tokens || 0;
 
       // Best-effort sanitization
       if (typeof responseText === "string") {
@@ -105,32 +119,75 @@ export async function POST(req) {
       parsedFeedback = validateAndFixResponse(parsedFeedback);
 
       // Log to Supabase (only if env is configured)
-      const hasSupabaseEnv = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (hasSupabaseEnv) {
-        try {
-          const supabase = createServerClient();
-          const sanitizedStudentId = sanitizeInput(body?.studentId ?? "") || null;
-          const { error } = await supabase.from("writing_logs").insert({
-            student_id: sanitizedStudentId,
-            class_code: classCode,
-            prompt: prompt,
-            ai_response: responseText,
-            tokens_in: data.usage?.prompt_tokens || 0,
-            tokens_out: data.usage?.completion_tokens || 0,
-          });
+      const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const hasServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+      const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      const canLogGuest = hasSupabaseUrl && hasServiceRole;
+      const canLogStudent = hasSupabaseUrl && hasAnonKey;
+      const baseLogEntry = {
+        class_code: classCode,
+        prompt,
+        ai_response: responseText,
+        tokens_in: tokensIn,
+        tokens_out: tokensOut
+      };
 
-          if (error) {
-            console.error("Supabase logging error:", error);
+      if (!hasSupabaseUrl) {
+        console.warn("Supabase env not configured; skipping logging");
+      } else {
+        try {
+          if (hasStudentId && canLogStudent) {
+            const supabase = createServerClient({ useServiceRole: false });
+            const { data: studentRecord, error: studentLookupError } = await supabase
+              .from("students")
+              .select("class_id, school_id")
+              .eq("id", studentId)
+              .single();
+
+            if (studentLookupError) {
+              console.error("Failed to fetch student record for logging:", studentLookupError);
+            }
+
+            const logEntry = {
+              ...baseLogEntry,
+              student_id: studentId,
+              class_id: studentRecord?.class_id ?? null,
+              school_id: studentRecord?.school_id ?? null,
+              guest_session_id: null,
+              is_guest: false
+            };
+
+            await supabase.from("writing_logs").insert(logEntry);
+          } else if (hasGuestId && canLogGuest) {
+            const supabase = createServerClient();
+            const logEntry = {
+              ...baseLogEntry,
+              student_id: null,
+              class_id: null,
+              school_id: null,
+              guest_session_id: guestSessionId,
+              is_guest: true
+            };
+
+            await supabase.from("writing_logs").insert(logEntry);
           }
         } catch (logError) {
           console.error("Failed to log to Supabase:", logError);
           // Don't fail the request if logging fails
         }
-      } else {
-        console.warn("Supabase env not configured; skipping logging");
       }
 
-      return NextResponse.json(parsedFeedback, { status: HTTP_STATUS.OK });
+      return NextResponse.json(
+        {
+          success: true,
+          feedback: parsedFeedback,
+          tokensUsed: {
+            input: tokensIn,
+            output: tokensOut
+          }
+        },
+        { status: HTTP_STATUS.OK }
+      );
     });
 
     return result;

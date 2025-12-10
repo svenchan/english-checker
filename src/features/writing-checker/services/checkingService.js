@@ -4,7 +4,7 @@ const CHECK_ENDPOINT = "/api/check";
 
 /**
  * Submit writing for grammar checking.
- * @param {{ text: string; classCode: string }} payload
+ * @param {{ text: string; classCode: string; studentId?: string; guestSessionId?: string }} payload
  * @returns {Promise<import("../types/checker.types").FeedbackResponse>}
  */
 export async function submitWritingCheck(payload) {
@@ -22,6 +22,10 @@ export async function submitWritingCheck(payload) {
     error.status = response.status;
     error.payload = data;
     throw error;
+  }
+
+  if (data?.success && data?.feedback) {
+    return data.feedback;
   }
 
   return data;
