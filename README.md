@@ -5,6 +5,13 @@ A next.js webapp  that uses AI to help students check their own work and underst
 
 Published on vercel app using supabase for logging mistakes and writing.
 
+## Authentication & access
+
+- **Class codes removed** – the checker now launches directly in guest mode. Each browser session receives an anonymous `guestSessionId`, so no manual class code entry is required.
+- **Optional Google sign-in** – the left sidebar still exposes the Supabase/Google OAuth flow so students can sync history once their account/profile exists.
+- **Groq API key** – all `/api/check` requests are routed through the `CLASS11` API key. Set `GROQ_API_KEY_11` (preferred) or `GROQ_API_KEY_CLASS11`/`GROQ_API_KEY` in your environment.
+- **Teacher dashboard** – `/teacher/requests` is temporarily disabled while we migrate to Supabase-based teacher roles. The API endpoint now responds with `503 TEACHER_DASHBOARD_DISABLED` until the new flow ships.
+
 ## Development
 
 - `npm run dev` — start the Next.js dev server

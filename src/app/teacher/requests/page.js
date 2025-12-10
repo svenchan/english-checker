@@ -1,42 +1,29 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useAuth } from "@/features/auth/hooks/useAuth";
-import { LoginForm } from "@/features/auth/components/LoginForm";
 import { Header } from "@/features/writing-checker/components/Header";
-import { useRequestLogs } from "@/features/teacher-requests/hooks/useRequestLogs";
-import { RequestList } from "@/features/teacher-requests/components/RequestList";
-import { RequestDetail } from "@/features/teacher-requests/components/RequestDetail";
-import { CLASSROOM_CODES } from "@/config/classroomCodes";
+import { useSupabaseSession } from "@/features/auth/hooks/useSupabaseSession";
 
 export default function TeacherRequestsPage() {
-  const { classCode, isAuthenticated, login, logout, error, isLoading } = useAuth();
-  const [classFilters, setClassFilters] = useState([]);
-  const filterOptions = useMemo(
-    () => CLASSROOM_CODES.map((code) => ({ value: code, label: code })),
-    []
-  );
-  const {
-    logs,
-    selectedLog,
-    selectLog,
-    isLoading: isLogsLoading,
-    error: logsError,
-    reload
-  } = useRequestLogs(classCode, { limit: 100, classFilters });
+  const { user, isLoading } = useSupabaseSession();
 
-  if (!isAuthenticated) {
-    return <LoginForm onLogin={login} error={error} isLoading={isLoading} />;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-600">
+        教師ダッシュボードを読み込み中...
+      </div>
+    );
   }
 
-  if (classCode !== "TEACHER") {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-center p-8 space-y-4">
         <div>
-          <p className="text-sm text-gray-500">アクセス権限がありません</p>
-          <h1 className="text-2xl font-semibold text-gray-900 mt-2">このページは教師専用です</h1>
-          <p className="text-gray-600 mt-4">教師用クラスコードでログインすると提出履歴を確認できます。</p>
+          <p className="text-sm text-gray-500">Google サインインが必要です</p>
+          <h1 className="text-2xl font-semibold text-gray-900 mt-2">教師ダッシュボードは近日公開</h1>
+          <p className="text-gray-600 mt-4">
+            まずトップページ左のサイドバーから Google でサインインしてください。教師権限は順次付与されます。
+          </p>
         </div>
         <Link href="/" className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors">
           チェッカーに戻る
@@ -46,48 +33,27 @@ export default function TeacherRequestsPage() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
-      <Header classCode={classCode} onLogout={logout} />
-      <main className="flex-1 p-6 flex flex-col gap-6 overflow-hidden min-h-0">
-        <div className="flex flex-wrap items-center gap-3 justify-between">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Header userEmail={user.email} />
+      <main className="flex-1 p-8">
+        <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow-sm border border-gray-100 space-y-4">
+          <p className="text-sm font-semibold text-blue-600 uppercase tracking-wide">Teacher Dashboard</p>
+          <h1 className="text-3xl font-bold text-gray-900">作業中です</h1>
+          <p className="text-gray-600">
+            クラスコード廃止に伴い、教師向けログ閲覧ツールを Supabase ベースの認証に移行しています。
+            近日中に Google アカウントでの権限チェックを追加し、再度提出履歴を閲覧できるようにします。
+          </p>
+          <p className="text-gray-500 text-sm">
+            緊急でログが必要な場合は Supabase ダッシュボードの <code>writing_logs</code> テーブルから直接ご確認ください。
+          </p>
           <div>
-            <p className="text-sm text-gray-500">教師ビュー</p>
-            <h1 className="text-2xl font-bold text-gray-900">提出リクエスト一覧</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={reload}
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
-              disabled={isLogsLoading}
-            >
-              {isLogsLoading ? "更新中..." : "再読み込み"}
-            </button>
             <Link
               href="/"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-500 transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-500 transition-colors"
             >
               チェッカーに戻る
             </Link>
           </div>
-        </div>
-
-        {logsError && (
-          <div className="p-4 rounded-lg bg-red-50 text-red-700 text-sm border border-red-100">
-            {logsError}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-6 flex-1 min-h-0 overflow-hidden">
-          <RequestList
-            entries={logs}
-            selectedId={selectedLog?.id}
-            onSelect={selectLog}
-            isLoading={isLogsLoading}
-            filterOptions={filterOptions}
-            selectedFilters={classFilters}
-            onFilterChange={setClassFilters}
-          />
-          <RequestDetail entry={selectedLog} />
         </div>
       </main>
     </div>

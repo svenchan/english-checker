@@ -7,14 +7,12 @@ import { Icons } from "@/shared/components/ui/Icons";
 import {
   COOLDOWN_SECONDS,
   JAPANESE_LOANWORD_SET,
-  MAX_CHAR_COUNT,
-  TEACHER_CODE
+  MAX_CHAR_COUNT
 } from "../constants";
 
-export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, classCode, feedback, onReset }) {
+export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, feedback, onReset, isSessionReady = true }) {
   const [cooldown, setCooldown] = useState(0);
   const [inputWarning, setInputWarning] = useState("");
-  const isTeacher = (classCode || "").toUpperCase() === TEACHER_CODE;
   
   useEffect(() => {
     let interval;
@@ -34,9 +32,9 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
       return;
     }
     // Otherwise this acts as "チェックする"
+    if (!isSessionReady) return;
     onCheck();
-    // Only start the 60s cooldown for non-teacher class codes
-    if (!isTeacher) setCooldown(COOLDOWN_SECONDS);
+    setCooldown(COOLDOWN_SECONDS);
   };
 
   const handleTextChange = (newText) => {
@@ -105,7 +103,7 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
       </div>
       
       <textarea
-        value={text}
+  value={text}
         onChange={(e) => handleTextChange(e.target.value)}
         placeholder={`例: I go to school yesterday. ここに英文を入力してください...`}
         className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
@@ -120,7 +118,7 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
       <div className="mt-4 flex justify-end space-x-3">
         <button
           onClick={handlePrimaryClick}
-          disabled={feedback ? (isChecking || cooldown > 0) : (isChecking || !text.trim())}
+          disabled={feedback ? (isChecking || cooldown > 0) : (isChecking || !text.trim() || !isSessionReady)}
           className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
           {isChecking ? (
@@ -140,6 +138,11 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
                 <span>新しく書く</span>
               </>
             )
+          ) : !isSessionReady ? (
+            <>
+              <Icons.Loader className="h-5 w-5 animate-spin" />
+              <span>準備中...</span>
+            </>
           ) : (
             <>
               <Icons.Send className="h-5 w-5" />

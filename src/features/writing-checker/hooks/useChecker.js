@@ -5,22 +5,22 @@ import { useState } from "react";
 import { submitWritingCheck } from "../services/checkingService";
 import { useGuestSession } from "./useGuestSession";
 
-export function useChecker(classCode, onAuthError, { studentId } = {}) {
+export function useChecker({ studentId } = {}) {
   const [studentText, setStudentText] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const guestSessionId = useGuestSession();
+  const isSessionReady = Boolean(studentId || guestSessionId);
 
   const checkWriting = async () => {
-    if (!studentText.trim() || isChecking) return;
+    if (!studentText.trim() || isChecking || !isSessionReady) return;
 
     setIsChecking(true);
     setFeedback(null);
 
     try {
       const payload = {
-        text: studentText,
-        classCode
+        text: studentText
       };
 
       // Prefer authenticated identifiers; fall back to a guest session UUID for anonymous users.
@@ -34,12 +34,7 @@ export function useChecker(classCode, onAuthError, { studentId } = {}) {
       setFeedback(parsed);
     } catch (err) {
       console.error("Error checking writing:", err);
-      if (err.status === 401 || err.message?.includes("無効なクラスコード")) {
-        alert("クラスコードが正しくありません。もう一度ログインしてください。");
-        onAuthError?.();
-      } else {
-        alert(`エラーが発生しました: ${err.message}`);
-      }
+      alert(`エラーが発生しました: ${err.message}`);
     } finally {
       setIsChecking(false);
     }
@@ -56,6 +51,7 @@ export function useChecker(classCode, onAuthError, { studentId } = {}) {
     isChecking,
     feedback,
     checkWriting,
-    reset
+    reset,
+    isSessionReady
   };
 }

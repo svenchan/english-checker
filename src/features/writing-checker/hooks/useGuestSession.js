@@ -19,11 +19,21 @@ const setStoredGuestSessionId = (value) => {
 };
 
 const createGuestSessionId = () => {
-  if (typeof window === 'undefined' || typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
+  if (typeof window === 'undefined') {
     return null;
   }
 
-  const newId = crypto.randomUUID();
+  let newId = null;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    newId = crypto.randomUUID();
+  } else if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const array = new Uint32Array(4);
+    crypto.getRandomValues(array);
+    newId = Array.from(array, (value) => value.toString(16).padStart(8, '0')).join('-');
+  } else {
+    newId = `guest-${Date.now().toString(16)}-${Math.random().toString(16).slice(2, 10)}`;
+  }
+
   setStoredGuestSessionId(newId);
   return newId;
 };

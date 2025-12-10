@@ -1,47 +1,30 @@
 // components/checker/Header.js
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Icons } from "@/shared/components/ui/Icons";
 
-export function Header({ classCode, onLogout, onReset, hasFeedback }) {
-  const isTeacher = classCode === "TEACHER";
-  const pathname = usePathname();
-  const onTeacherPage = pathname?.startsWith("/teacher/requests");
-
+export function Header({ userEmail, onReset, hasFeedback }) {
   return (
     <div className="bg-blue-600 text-white p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center space-x-3">
           <Icons.BookOpen className="h-8 w-8" />
           <div>
             <h1 className="text-2xl font-bold">英作文チェッカー</h1>
-            <p className="text-blue-100 text-sm">クラス: {classCode}</p>
+            <p className="text-blue-100 text-sm">
+              {userEmail ? `ログイン中: ${userEmail}` : "ゲストモード (保存なし)"}
+            </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          {isTeacher && (
-            <Link
-              href="/teacher/requests"
-              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
-                onTeacherPage
-                  ? "bg-white text-blue-600 border-white"
-                  : "bg-white/10 border-white/20 text-white hover:bg-white/20"
-              }`}
-            >
-              提出一覧
-            </Link>
-          )}
+        {hasFeedback && (
           <button
-            onClick={onLogout}
-            className="flex items-center space-x-2 px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-            title="ログアウト"
+            onClick={onReset}
+            className="inline-flex items-center justify-center rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
           >
-            <Icons.LogOut className="h-4 w-4" />
-            <span>ログアウト</span>
+            <Icons.RefreshCw className="mr-2 h-4 w-4" />
+            もう一度書く
           </button>
-        </div>
+        )}
       </div>
     </div>
   );

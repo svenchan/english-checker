@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 import { enqueue } from "./queue";
-import { getApiKeyForClass, isValidClassCode } from "@/config/classCodeMap";
 import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "@/config/prompts";
 import { ERRORS, HTTP_STATUS } from "@/config/errors";
 import { validateAndFixResponse } from "@/lib/validators";
 import { createServerClient } from "@/config/supabase";
 import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
-import { sanitizeInput, sanitizeClassCode } from "@/lib/sanitize";
+import { sanitizeInput } from "@/lib/sanitize";
+import { DEFAULT_CLASS_CODE, getDefaultGroqApiKey } from "@/config/appConfig";
 
 export async function POST(req) {
   try {
     const result = await enqueue(req, async (r) => {
       const body = await r.json().catch(() => ({}));
       const text = sanitizeInput(body?.text ?? "");
-      const classCode = sanitizeClassCode(body?.classCode ?? "");
       const studentId = sanitizeInput(body?.studentId ?? "");
       const guestSessionId = sanitizeInput(body?.guestSessionId ?? "");
       const hasStudentId = Boolean(studentId);
@@ -27,14 +26,6 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.TEXT_TOO_LONG }, { status: HTTP_STATUS.BAD_REQUEST });
       }
 
-      if (!classCode) {
-        return NextResponse.json({ error: ERRORS.NO_CLASS_CODE }, { status: HTTP_STATUS.BAD_REQUEST });
-      }
-
-      if (!isValidClassCode(classCode)) {
-        return NextResponse.json({ error: ERRORS.INVALID_CLASS_CODE }, { status: HTTP_STATUS.UNAUTHORIZED });
-      }
-
       if (!hasStudentId && !hasGuestId) {
         return NextResponse.json({ error: ERRORS.MISSING_IDENTIFIER }, { status: HTTP_STATUS.BAD_REQUEST });
       }
@@ -43,7 +34,8 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.CONFLICTING_IDENTIFIERS }, { status: HTTP_STATUS.BAD_REQUEST });
       }
 
-      const apiKey = getApiKeyForClass(classCode);
+  const classCode = DEFAULT_CLASS_CODE;
+  const apiKey = getDefaultGroqApiKey();
       const prompt = buildCheckPrompt(text);
 
       async function callGroq(options = { useJsonResponseFormat: true }) {
