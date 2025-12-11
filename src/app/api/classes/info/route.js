@@ -3,6 +3,8 @@ import { createServerClient } from "@/config/supabase";
 import { HTTP_STATUS } from "@/config/errors";
 import { getClassInfoResponse } from "./logic";
 
+export const dynamic = "force-dynamic";
+
 function respondWithError(message, status) {
   return NextResponse.json({ error: message }, { status });
 }

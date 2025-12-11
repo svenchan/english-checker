@@ -3,6 +3,8 @@ import { createServerClient } from "@/config/supabase";
 import { HTTP_STATUS } from "@/config/errors";
 import { extractStudentTextFromPrompt, parseAiResponseString } from "@/features/teacher-requests/utils/logParsers";
 
+export const dynamic = "force-dynamic";
+
 function jsonError(message, status, details) {
   if (status >= 500) {
     console.error("Teacher logs error:", details || message);
