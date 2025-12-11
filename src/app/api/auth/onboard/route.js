@@ -1,9 +1,67 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/config/supabase";
 import { HTTP_STATUS } from "@/config/errors";
+import { getHoldingClassIdFromEnv } from "@/config/appConfig";
 import { isNameValid, normalizeNameInput } from "@/lib/nameValidation";
 
 const VALID_ROLES = new Set(["student", "teacher"]);
+let cachedHoldingClassRecord = null;
+
+async function fetchClassRecordById(supabase, classId) {
+  const { data, error } = await supabase
+    .from("classes")
+    .select("id, school_id")
+    .eq("id", classId)
+    .maybeSingle();
+
+  if (error) {
+    throw Object.assign(new Error("Failed to load holding class."), { details: error });
+  }
+
+  if (!data?.id) {
+    throw new Error("Configured holding class was not found.");
+  }
+
+  return data;
+}
+
+async function fetchOldestClassForSchool(supabase, schoolId) {
+  const { data, error } = await supabase
+    .from("classes")
+    .select("id, school_id")
+    .eq("school_id", schoolId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw Object.assign(new Error("Failed to look up default class."), { details: error });
+  }
+
+  if (!data?.id) {
+    throw new Error("No classes are configured for this school.");
+  }
+
+  return data;
+}
+
+async function resolveHoldingClassRecord(supabase, schoolId) {
+  if (cachedHoldingClassRecord) {
+    return cachedHoldingClassRecord;
+  }
+
+  const envHoldingClassId = getHoldingClassIdFromEnv();
+  let record;
+
+  if (envHoldingClassId) {
+    record = await fetchClassRecordById(supabase, envHoldingClassId);
+  } else {
+    record = await fetchOldestClassForSchool(supabase, schoolId);
+  }
+
+  cachedHoldingClassRecord = record;
+  return record;
+}
 
 function jsonError(message, status, meta) {
   const payload = { message, status };
@@ -243,7 +301,7 @@ export async function POST(req) {
       return jsonError("School ID is not configured.", HTTP_STATUS.SERVER_ERROR);
     }
 
-    const existingProfile = await getProfileForAuthId(supabase, authId);
+  const existingProfile = await getProfileForAuthId(supabase, authId);
 
     if (existingProfile.onboarded) {
       return NextResponse.json({
@@ -276,12 +334,23 @@ export async function POST(req) {
     let teacherId = null;
 
     if (role === "student") {
+      let holdingClassRecord;
+      try {
+        holdingClassRecord = await resolveHoldingClassRecord(supabase, schoolId);
+      } catch (classLookupError) {
+        return jsonError(
+          "Failed to find a waiting class for new students.",
+          HTTP_STATUS.SERVER_ERROR,
+          classLookupError?.details || classLookupError
+        );
+      }
+
       const { data: studentRow, error: studentInsertError } = await supabase
         .from("students")
         .insert({
           user_id: userId,
-          class_id: null,
-          school_id: schoolId,
+          class_id: holdingClassRecord.id,
+          school_id: holdingClassRecord.school_id ?? schoolId,
           student_number: null
         })
         .select("id, school_id, class_id")

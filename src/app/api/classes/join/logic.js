@@ -1,4 +1,5 @@
 import { HTTP_STATUS } from "../../../../config/errors.js";
+import { getHoldingClassIdFromEnv } from "../../../../config/appConfig.js";
 
 export const ERROR_MESSAGES = {
   MISSING_TOKEN: "joinToken is required.",
@@ -28,7 +29,13 @@ function errorResponse(status, message, logError) {
   };
 }
 
-export async function handleJoinClass({ supabaseClient, joinToken, accessToken, now = () => new Date().toISOString() }) {
+export async function handleJoinClass({
+  supabaseClient,
+  joinToken,
+  accessToken,
+  now = () => new Date().toISOString(),
+  holdingClassId = getHoldingClassIdFromEnv()
+}) {
   const sanitizedToken = typeof joinToken === "string" ? joinToken.trim() : "";
 
   if (!sanitizedToken) {
@@ -49,7 +56,7 @@ export async function handleJoinClass({ supabaseClient, joinToken, accessToken, 
 
   const { data: studentRecord, error: studentError } = await supabaseClient
     .from("students")
-    .select("id, class_id")
+    .select("id, class_id, school_id")
     .eq("user_id", authId)
     .maybeSingle();
 
@@ -61,13 +68,15 @@ export async function handleJoinClass({ supabaseClient, joinToken, accessToken, 
     return errorResponse(HTTP_STATUS.FORBIDDEN, ERROR_MESSAGES.NOT_STUDENT);
   }
 
-  if (studentRecord.class_id) {
+  const isInHoldingClass = holdingClassId && studentRecord.class_id === holdingClassId;
+
+  if (studentRecord.class_id && !isInHoldingClass) {
     return errorResponse(HTTP_STATUS.CONFLICT, ERROR_MESSAGES.ALREADY_IN_CLASS);
   }
 
   const { data: classRecord, error: classError } = await supabaseClient
     .from("classes")
-    .select("id, name")
+    .select("id, name, school_id")
     .eq("join_token", sanitizedToken)
     .maybeSingle();
 
@@ -83,7 +92,7 @@ export async function handleJoinClass({ supabaseClient, joinToken, accessToken, 
 
   const { error: updateError } = await supabaseClient
     .from("students")
-    .update({ class_id: classRecord.id, joined_at: timestamp })
+    .update({ class_id: classRecord.id, school_id: classRecord.school_id, joined_at: timestamp })
     .eq("id", studentRecord.id);
 
   if (updateError) {

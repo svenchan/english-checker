@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/config/supabase";
 import { HTTP_STATUS } from "@/config/errors";
+import { getHoldingClassIdFromEnv } from "@/config/appConfig";
 import { extractStudentTextFromPrompt, parseAiResponseString } from "@/features/teacher-requests/utils/logParsers";
 
 export const dynamic = "force-dynamic";
@@ -67,7 +68,8 @@ export async function GET(req) {
       return jsonError("Teacher profile is incomplete.", HTTP_STATUS.FORBIDDEN);
     }
 
-    const searchParams = req.nextUrl.searchParams;
+  const searchParams = req.nextUrl.searchParams;
+  const holdingClassId = getHoldingClassIdFromEnv();
     const limitParam = Number.parseInt(searchParams.get("limit") || "50", 10);
     const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 200) : 50;
     const classFilters = searchParams.getAll("classFilter").filter(Boolean);
@@ -82,6 +84,10 @@ export async function GET(req) {
 
     if (classFilters.length > 0) {
       query = query.in("class_id", classFilters);
+    }
+
+    if (holdingClassId) {
+      query = query.neq("class_id", holdingClassId);
     }
 
     const { data: logRows, error: logsError } = await query;

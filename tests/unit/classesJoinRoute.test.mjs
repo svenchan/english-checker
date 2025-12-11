@@ -7,9 +7,9 @@ function createSupabaseMock(options = {}) {
   const {
     userId = "auth-1",
     authError = null,
-    studentRecord = { id: "student-1", class_id: null },
+    studentRecord = { id: "student-1", class_id: null, school_id: "school-holding" },
     studentError = null,
-    classRecord = { id: "class-1", name: "Room A" },
+    classRecord = { id: "class-1", name: "Room A", school_id: "school-real" },
     classError = null,
     updateError = null
   } = options;
@@ -114,8 +114,8 @@ test("returns 404 when class token is invalid", async () => {
 });
 
 test("returns 409 when student already has a class", async () => {
-  const { supabase } = createSupabaseMock({ studentRecord: { id: "student-1", class_id: "class-xyz" } });
-  const result = await handleJoinClass(buildParams({ supabaseClient: supabase }));
+  const { supabase } = createSupabaseMock({ studentRecord: { id: "student-1", class_id: "class-xyz", school_id: "school-1" } });
+  const result = await handleJoinClass(buildParams({ supabaseClient: supabase, holdingClassId: "waiting-class" }));
   assert.equal(result.status, 409);
   assert.deepEqual(result.body, { error: ERROR_MESSAGES.ALREADY_IN_CLASS });
 });
@@ -148,6 +148,31 @@ test("successfully assigns student to class", async () => {
   const updatePayload = supabaseMock.getUpdatePayload();
   assert.deepEqual(updatePayload, {
     class_id: "class-1",
+    school_id: "school-real",
+    joined_at: fixedTimestamp
+  });
+});
+
+test("allows students in holding class to join a real class", async () => {
+  const fixedTimestamp = "2024-06-01T00:00:00.000Z";
+  const holdingClassId = "holding-class";
+  const supabaseMock = createSupabaseMock({
+    studentRecord: { id: "student-1", class_id: holdingClassId, school_id: "holding-school" }
+  });
+
+  const result = await handleJoinClass(
+    buildParams({
+      supabaseClient: supabaseMock.supabase,
+      holdingClassId,
+      now: () => fixedTimestamp
+    })
+  );
+
+  assert.equal(result.status, 200);
+  const updatePayload = supabaseMock.getUpdatePayload();
+  assert.deepEqual(updatePayload, {
+    class_id: "class-1",
+    school_id: "school-real",
     joined_at: fixedTimestamp
   });
 });

@@ -10,6 +10,8 @@ Published on vercel app using supabase for logging mistakes and writing.
 - **Class codes removed** – the checker now launches directly in guest mode. Each browser session receives an anonymous `guestSessionId`, so no manual class code entry is required.
 - **Optional Google sign-in** – the left sidebar still exposes the Supabase/Google OAuth flow so students can sync history once their account/profile exists.
 - **Groq API key** – all `/api/check` requests are routed through the `CLASS11` API key. Set `GROQ_API_KEY_11` (preferred) or `GROQ_API_KEY_CLASS11`/`GROQ_API_KEY` in your environment.
+- **Default class assignment** – onboarding now requires at least one Supabase `classes` row for the configured school. Set `NEXT_PUBLIC_DEFAULT_CLASS_ID` (or `DEFAULT_CLASS_ID`/`SUPABASE_DEFAULT_CLASS_ID`) to pin which class new students join; if omitted, the oldest class for the school is used.
+- **Holding class (optional)** – Set `WAITING_CLASS_ID` (or `SUPABASE_WAITING_CLASS_ID`/`NEXT_PUBLIC_WAITING_CLASS_ID`) to the UUID of a “waiting room” class. New students will be placed there and remain invisible to teachers until they join a real class via a join token; teacher log queries automatically ignore this holding class. If the env isn't provided, onboarding falls back to the default-class behavior above.
 - **Teacher dashboard** – `/teacher/requests` is temporarily disabled while we migrate to Supabase-based teacher roles. The API endpoint now responds with `503 TEACHER_DASHBOARD_DISABLED` until the new flow ships.
 
 ## Development
