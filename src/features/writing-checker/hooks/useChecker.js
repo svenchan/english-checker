@@ -5,12 +5,12 @@ import { useState } from "react";
 import { submitWritingCheck } from "../services/checkingService";
 import { useGuestSession } from "./useGuestSession";
 
-export function useChecker({ studentId } = {}) {
+export function useChecker({ studentId, teacherId } = {}) {
   const [studentText, setStudentText] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const guestSessionId = useGuestSession();
-  const isSessionReady = Boolean(studentId || guestSessionId);
+  const isSessionReady = Boolean(studentId || teacherId || guestSessionId);
 
   const checkWriting = async () => {
     if (!studentText.trim() || isChecking || !isSessionReady) return;
@@ -26,9 +26,20 @@ export function useChecker({ studentId } = {}) {
       // Prefer authenticated identifiers; fall back to a guest session UUID for anonymous users.
       if (studentId) {
         payload.studentId = studentId;
+      } else if (teacherId) {
+        payload.teacherId = teacherId;
       } else if (guestSessionId) {
         payload.guestSessionId = guestSessionId;
       }
+
+      console.log("Submitting writing check", {
+        hasStudentId: Boolean(payload.studentId),
+        studentId: payload.studentId || null,
+        hasTeacherId: Boolean(payload.teacherId),
+        teacherId: payload.teacherId || null,
+        hasGuestSessionId: Boolean(payload.guestSessionId),
+        guestSessionId: payload.guestSessionId || null
+      });
 
       const parsed = await submitWritingCheck(payload);
       setFeedback(parsed);

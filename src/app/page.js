@@ -18,7 +18,10 @@ export default function Page() {
   const { user: supabaseUser, isLoading: isSupabaseLoading } = useSupabaseSession();
   const authActions = useSupabaseAuthActions();
   const onboarding = useOnboardingProfile(supabaseUser);
-  const checker = useChecker({ studentId: onboarding.studentId });
+  const checker = useChecker({
+    studentId: onboarding.studentId,
+    teacherId: onboarding.teacherId
+  });
 
   const mistakeHighlight = useMistakeHighlight(
     checker.studentText,

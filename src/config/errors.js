@@ -5,8 +5,8 @@
 export const ERRORS = {
   NO_TEXT: 'テキストが必要です',
   TEXT_TOO_LONG: 'テキストは400文字以内で入力してください',
-  MISSING_IDENTIFIER: 'studentId か guestSessionId を指定してください',
-  CONFLICTING_IDENTIFIERS: 'studentId と guestSessionId を同時に送信できません',
+  MISSING_IDENTIFIER: 'studentId / teacherId か guestSessionId を指定してください',
+  CONFLICTING_IDENTIFIERS: 'studentId / teacherId / guestSessionId を同時に送信できません',
   GROQ_API_ERROR: 'AI サービスでエラーが発生しました',
   SERVER_ERROR: 'サーバーエラーが発生しました',
   RATE_LIMIT_EXCEEDED: '使いすぎです。少し待ってからもう一度試してください',

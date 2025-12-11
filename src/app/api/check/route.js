@@ -14,9 +14,12 @@ export async function POST(req) {
       const body = await r.json().catch(() => ({}));
       const text = sanitizeInput(body?.text ?? "");
       const studentId = sanitizeInput(body?.studentId ?? "");
+      const teacherId = sanitizeInput(body?.teacherId ?? "");
       const guestSessionId = sanitizeInput(body?.guestSessionId ?? "");
       const hasStudentId = Boolean(studentId);
+      const hasTeacherId = Boolean(teacherId);
       const hasGuestId = Boolean(guestSessionId);
+      const identifiersProvided = Number(hasStudentId) + Number(hasTeacherId) + Number(hasGuestId);
 
       if (!text) {
         return NextResponse.json({ error: ERRORS.NO_TEXT }, { status: HTTP_STATUS.BAD_REQUEST });
@@ -26,16 +29,16 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.TEXT_TOO_LONG }, { status: HTTP_STATUS.BAD_REQUEST });
       }
 
-      if (!hasStudentId && !hasGuestId) {
+      if (identifiersProvided === 0) {
         return NextResponse.json({ error: ERRORS.MISSING_IDENTIFIER }, { status: HTTP_STATUS.BAD_REQUEST });
       }
 
-      if (hasStudentId && hasGuestId) {
+      if (identifiersProvided > 1) {
         return NextResponse.json({ error: ERRORS.CONFLICTING_IDENTIFIERS }, { status: HTTP_STATUS.BAD_REQUEST });
       }
 
-  const classCode = DEFAULT_CLASS_CODE;
-  const apiKey = getDefaultGroqApiKey();
+      const classCode = DEFAULT_CLASS_CODE;
+      const apiKey = getDefaultGroqApiKey();
       const prompt = buildCheckPrompt(text);
 
       async function callGroq(options = { useJsonResponseFormat: true }) {
@@ -111,11 +114,15 @@ export async function POST(req) {
       parsedFeedback = validateAndFixResponse(parsedFeedback);
 
       // Log to Supabase (only if env is configured)
+      // Logging flow:
+      //   1. Students: service-role lookup against `students` for class/school metadata.
+      //   2. Teachers: service-role lookup against `teachers` so teacher usage isn’t mis-filed as guests.
+      //   3. Guests: fall back to guest_session_id-based logging.
+      // All lookups use `maybeSingle()` to avoid throwing when rows are missing; log insert still happens
+      // with whatever metadata is available.
       const hasSupabaseUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
       const hasServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
-      const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      const canLogGuest = hasSupabaseUrl && hasServiceRole;
-      const canLogStudent = hasSupabaseUrl && hasAnonKey;
+      const canLog = hasSupabaseUrl && hasServiceRole;
       const baseLogEntry = {
         prompt,
         ai_response: responseText,
@@ -125,42 +132,66 @@ export async function POST(req) {
 
       if (!hasSupabaseUrl) {
         console.warn("Supabase env not configured; skipping logging");
-      } else {
+      } else if (!hasServiceRole) {
+        console.warn("Supabase service role key missing; skipping logging");
+      } else if (canLog) {
         try {
-          if (hasStudentId && canLogStudent) {
-            const supabase = createServerClient({ useServiceRole: false });
+          const supabase = createServerClient();
+
+          if (hasStudentId) {
             const { data: studentRecord, error: studentLookupError } = await supabase
               .from("students")
               .select("class_id, school_id")
               .eq("id", studentId)
-              .single();
+              .maybeSingle();
 
             if (studentLookupError) {
               console.error("Failed to fetch student record for logging:", studentLookupError);
+            } else if (!studentRecord) {
+              console.warn("Student record missing for logging", { studentId });
             }
 
-            const logEntry = {
+            await supabase.from("writing_logs").insert({
               ...baseLogEntry,
               student_id: studentId,
               class_id: studentRecord?.class_id ?? null,
               school_id: studentRecord?.school_id ?? null,
+              teacher_id: null,
               guest_session_id: null,
               is_guest: false
-            };
+            });
+          } else if (hasTeacherId) {
+            const { data: teacherRecord, error: teacherLookupError } = await supabase
+              .from("teachers")
+              .select("school_id")
+              .eq("id", teacherId)
+              .maybeSingle();
 
-            await supabase.from("writing_logs").insert(logEntry);
-          } else if (guestSessionId && canLogGuest) {
-            const supabase = createServerClient();
-            const logEntry = {
+            if (teacherLookupError) {
+              console.error("Failed to fetch teacher record for logging:", teacherLookupError);
+            } else if (!teacherRecord) {
+              console.warn("Teacher record missing for logging", { teacherId });
+            }
+
+            await supabase.from("writing_logs").insert({
+              ...baseLogEntry,
+              student_id: null,
+              class_id: null,
+              school_id: teacherRecord?.school_id ?? null,
+              teacher_id: teacherId,
+              guest_session_id: null,
+              is_guest: false
+            });
+          } else if (guestSessionId) {
+            await supabase.from("writing_logs").insert({
               ...baseLogEntry,
               student_id: null,
               class_id: null,
               school_id: null,
+              teacher_id: null,
               guest_session_id: guestSessionId,
               is_guest: true
-            };
-
-            await supabase.from("writing_logs").insert(logEntry);
+            });
           }
         } catch (logError) {
           console.error("Failed to log to Supabase:", logError);
