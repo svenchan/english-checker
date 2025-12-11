@@ -24,6 +24,26 @@ function EmptyState({ message }) {
   );
 }
 
+async function fetchAccessToken(supabase) {
+  if (!supabase) {
+    throw new Error("Supabase is not configured");
+  }
+
+  const { data, error } = await supabase.auth.getSession();
+
+  if (error) {
+    throw error;
+  }
+
+  const token = data?.session?.access_token;
+
+  if (!token) {
+    throw new Error("Not authenticated. Please log in again.");
+  }
+
+  return token;
+}
+
 export function ChatHistorySidebar({ user }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,46 +56,39 @@ export function ChatHistorySidebar({ user }) {
     setError("");
 
     try {
-      const { data: userRecord, error: userError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("auth_id", user.id)
-        .maybeSingle();
+      if (!supabase) {
+        throw new Error("Supabase is not configured");
+      }
 
-      if (userError) throw userError;
+      if (!user) {
+        setLogs([]);
+        setHasStudentProfile(true);
+        return;
+      }
 
-      if (!userRecord?.id) {
+      const token = await fetchAccessToken(supabase);
+
+      const response = await fetch("/api/logs/student", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (response.status === 403) {
         setHasStudentProfile(false);
         setLogs([]);
         return;
       }
 
-      const { data: studentRecord, error: studentError } = await supabase
-        .from("students")
-        .select("id")
-        .eq("user_id", userRecord.id)
-        .maybeSingle();
-
-      if (studentError) throw studentError;
-
-      if (!studentRecord?.id) {
-        setHasStudentProfile(false);
-        setLogs([]);
-        return;
+      if (!response.ok) {
+        throw new Error(payload?.error || "履歴の取得に失敗しました");
       }
-
-      const { data: historyRows, error: logsError } = await supabase
-        .from("writing_logs")
-        .select("id,prompt,created_at")
-        .eq("student_id", studentRecord.id)
-        .eq("is_guest", false)
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      if (logsError) throw logsError;
 
       setHasStudentProfile(true);
-      setLogs(historyRows || []);
+      setLogs(payload?.data || []);
     } catch (err) {
       console.error("Failed to load chat history", err);
       setError(err.message || "履歴の取得に失敗しました");
