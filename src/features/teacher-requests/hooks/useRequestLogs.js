@@ -22,7 +22,7 @@ export function useRequestLogs({ accessToken, limit = 50, classFilters = [], ena
     setError("");
 
     try {
-  const { entries, filterOptions: serverFilters } = await fetchRequestLogs({ accessToken, limit, classFilters });
+      const { entries, filterOptions: serverFilters } = await fetchRequestLogs({ accessToken, limit, classFilters });
       setLogs(entries);
       setFilterOptions(serverFilters);
       setSelectedLogId((prev) => {
@@ -37,7 +37,7 @@ export function useRequestLogs({ accessToken, limit = 50, classFilters = [], ena
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken, enabled, limit, JSON.stringify(classFilters)]);
+  }, [accessToken, classFilters, enabled, limit]);
 
   useEffect(() => {
     loadLogs();
