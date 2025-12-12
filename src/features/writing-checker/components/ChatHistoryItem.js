@@ -1,6 +1,8 @@
 "use client";
 
-const PREVIEW_CHAR_LIMIT = 60;
+import { extractStudentTextFromPrompt } from "@/lib/promptParsers";
+
+const PREVIEW_WORD_LIMIT = 12;
 
 function formatTimestamp(value) {
   if (!value) {
@@ -35,17 +37,36 @@ function formatTimestamp(value) {
   return `${dateFormatter.format(date)} at ${timeFormatter.format(date)}`;
 }
 
-function buildPreview(prompt = "") {
-  const normalized = prompt.replace(/\s+/g, " ").trim();
+function getStudentTextFromLog(log) {
+  if (!log) return "";
+
+  if (typeof log.student_text === "string" && log.student_text.length > 0) {
+    return log.student_text;
+  }
+
+  if (typeof log.studentText === "string" && log.studentText.length > 0) {
+    return log.studentText;
+  }
+
+  if (typeof log.prompt === "string" && log.prompt.length > 0) {
+    return extractStudentTextFromPrompt(log.prompt);
+  }
+
+  return "";
+}
+
+function buildPreview(text = "") {
+  const normalized = text.replace(/\s+/g, " ").trim();
   if (!normalized) {
     return "(No text)";
   }
 
-  if (normalized.length <= PREVIEW_CHAR_LIMIT) {
+  const words = normalized.split(" ");
+  if (words.length <= PREVIEW_WORD_LIMIT) {
     return normalized;
   }
 
-  return `${normalized.slice(0, PREVIEW_CHAR_LIMIT).trimEnd()}…`;
+  return `${words.slice(0, PREVIEW_WORD_LIMIT).join(" ")}…`;
 }
 
 export function ChatHistoryItem({ log }) {
@@ -53,7 +74,7 @@ export function ChatHistoryItem({ log }) {
     return null;
   }
 
-  const previewText = buildPreview(log.prompt || "");
+  const previewText = buildPreview(getStudentTextFromLog(log));
   const timestampLabel = formatTimestamp(log.created_at || log.createdAt);
 
   return (

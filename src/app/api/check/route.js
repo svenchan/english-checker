@@ -125,6 +125,7 @@ export async function POST(req) {
       const canLog = hasSupabaseUrl && hasServiceRole;
       const baseLogEntry = {
         prompt,
+        student_text: text,
         ai_response: responseText,
         tokens_in: tokensIn,
         tokens_out: tokensOut

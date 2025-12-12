@@ -95,7 +95,7 @@ export default function Page() {
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="max-h-screen overflow-hidden border-b border-gray-200 bg-white md:border-b-0 md:border-r">
           {supabaseUser ? (
-            <ChatHistorySidebar user={supabaseUser} />
+            <ChatHistorySidebar user={supabaseUser} studentId={onboarding.studentId} />
           ) : (
             <GuestSidebarPrompt isSessionLoading={isSupabaseLoading} />
           )}

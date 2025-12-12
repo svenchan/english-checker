@@ -2,6 +2,7 @@
 
 export const MAX_CHAR_COUNT = 400;
 export const COOLDOWN_SECONDS = 60;
+export const CHECK_COMPLETED_EVENT = "writing-check:completed";
 const JAPANESE_LOANWORDS = [
   "sushi",
   "sake",

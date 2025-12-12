@@ -174,6 +174,7 @@ CREATE TABLE public.writing_logs (
   class_id uuid,
   school_id uuid,
   prompt text,
+  student_text text,
   ai_response text,
   tokens_in integer,
   tokens_out integer,

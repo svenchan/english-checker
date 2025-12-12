@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { submitWritingCheck } from "../services/checkingService";
 import { useGuestSession } from "./useGuestSession";
+import { CHECK_COMPLETED_EVENT } from "../constants";
 
 export function useChecker({ studentId, teacherId } = {}) {
   const [studentText, setStudentText] = useState("");
@@ -43,6 +44,17 @@ export function useChecker({ studentId, teacherId } = {}) {
 
       const parsed = await submitWritingCheck(payload);
       setFeedback(parsed);
+
+      if (studentId && typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent(CHECK_COMPLETED_EVENT, {
+            detail: {
+              studentId,
+              createdAt: Date.now()
+            }
+          })
+        );
+      }
     } catch (err) {
       console.error("Error checking writing:", err);
       alert(`エラーが発生しました: ${err.message}`);

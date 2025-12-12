@@ -76,7 +76,9 @@ export async function GET(req) {
 
     let query = supabase
       .from("writing_logs")
-      .select("id, prompt, ai_response, created_at, tokens_in, tokens_out, class_id, school_id, is_guest")
+      .select(
+        "id, prompt, student_text, ai_response, created_at, tokens_in, tokens_out, class_id, school_id, is_guest"
+      )
       .eq("school_id", teacherRecord.school_id)
       .eq("is_guest", false)
       .order("created_at", { ascending: false })
@@ -125,7 +127,7 @@ export async function GET(req) {
         id: row.id,
         createdAt: row.created_at,
         classCode: classKey ? classMap.get(classKey) || classKey : "未割当",
-        studentText: extractStudentTextFromPrompt(row.prompt),
+        studentText: row.student_text || extractStudentTextFromPrompt(row.prompt),
         feedback,
         tokensIn: row.tokens_in ?? 0,
         tokensOut: row.tokens_out ?? 0,
