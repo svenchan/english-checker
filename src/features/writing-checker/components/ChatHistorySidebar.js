@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getSupabaseBrowserClient } from "@/config/supabaseBrowserClient";
 import { CHECK_COMPLETED_EVENT } from "../constants";
 import { ChatHistoryItem } from "./ChatHistoryItem";
+import { Icons } from "@/shared/components/ui/Icons";
 
 const PLACEHOLDER_COUNT = 8;
 const HISTORY_LIMIT = 20;
@@ -46,12 +47,14 @@ async function fetchAccessToken(supabase) {
   return token;
 }
 
-export function ChatHistorySidebar({ user, studentId }) {
+export function ChatHistorySidebar({ user, studentId, onOpenChange }) {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [hasStudentProfile, setHasStudentProfile] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const sidebarRef = useRef(null);
 
   useEffect(() => {
     console.log("[ChatHistorySidebar] Component mounted with studentId:", studentId);
@@ -254,6 +257,34 @@ export function ChatHistorySidebar({ user, studentId }) {
     };
   }, [studentId, supabase, upsertLog, user]);
 
+  useEffect(() => {
+    onOpenChange?.(isOpen);
+  }, [isOpen, onOpenChange]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    const handleClickOutside = (event) => {
+      if (!sidebarRef.current) {
+        return;
+      }
+
+      if (!sidebarRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [isOpen]);
+
   if (!user) {
     return null;
   }
@@ -261,39 +292,65 @@ export function ChatHistorySidebar({ user, studentId }) {
   const showEmptyState = !isLoading && !error && hasStudentProfile && logs.length === 0;
   const showMissingProfile = !isLoading && !error && !hasStudentProfile;
 
+  const containerClasses = [
+    "relative flex h-full items-start",
+    isOpen ? "gap-3 py-4 pl-4 pr-2" : "gap-2 py-4 pl-2 pr-0"
+  ].join(" ");
+
+  const panelWrapperClasses = [
+    "relative h-full overflow-hidden transition-[width,opacity,transform] duration-300 ease-in-out",
+    isOpen ? "w-[320px] translate-x-0 opacity-100" : "w-0 -translate-x-3 opacity-0 pointer-events-none"
+  ].join(" ");
+
+  const toggleButtonLabel = isOpen ? "履歴を閉じる" : "履歴を開く";
+
   return (
-    <div className="flex h-full max-h-screen flex-col bg-white">
-      <div className="border-b border-gray-200 px-4 py-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Chat History</p>
-        <h2 className="text-lg font-semibold text-gray-900">Recent checks</h2>
-      </div>
+    <div ref={sidebarRef} className={containerClasses}>
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+        aria-label={toggleButtonLabel}
+        className={`flex h-12 w-12 items-center justify-center rounded-full border text-gray-600 shadow-sm transition hover:border-gray-300 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isOpen ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200"}`}
+      >
+        <Icons.ChatBubble className="h-5 w-5" />
+      </button>
 
-      <div className="flex-1 overflow-y-auto">
-        {isLoading && <HistorySkeleton />}
-
-        {!isLoading && error && (
-          <div className="px-4 py-6 text-center text-sm text-red-600 space-y-3">
-            <p>{error}</p>
-            <button
-              type="button"
-              onClick={() => loadLogs()}
-              className="inline-flex items-center rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
-            >
-              Try again
-            </button>
+      <div className={panelWrapperClasses} aria-hidden={!isOpen}>
+        <div className="flex h-full max-h-screen flex-col border border-gray-200 bg-white shadow-lg">
+          <div className="border-b border-gray-200 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Chat History</p>
+            <h2 className="text-lg font-semibold text-gray-900">Recent checks</h2>
           </div>
-        )}
 
-        {showMissingProfile && <EmptyState message="Student profile not found." />}
-        {showEmptyState && <EmptyState message="No checks yet. Start by typing below!" />}
+          <div className="flex-1 overflow-y-auto">
+            {isLoading && <HistorySkeleton />}
 
-        {!isLoading && !error && hasStudentProfile && logs.length > 0 && (
-          <div className="divide-y divide-gray-100">
-            {logs.map((log) => (
-              <ChatHistoryItem key={log.id} log={log} />
-            ))}
+            {!isLoading && error && (
+              <div className="space-y-3 px-4 py-6 text-center text-sm text-red-600">
+                <p>{error}</p>
+                <button
+                  type="button"
+                  onClick={() => loadLogs()}
+                  className="inline-flex items-center rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {showMissingProfile && <EmptyState message="Student profile not found." />}
+            {showEmptyState && <EmptyState message="No checks yet. Start by typing below!" />}
+
+            {!isLoading && !error && hasStudentProfile && logs.length > 0 && (
+              <div className="divide-y divide-gray-100">
+                {logs.map((log) => (
+                  <ChatHistoryItem key={log.id} log={log} />
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

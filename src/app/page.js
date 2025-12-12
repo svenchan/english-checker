@@ -1,6 +1,7 @@
 // app/page.js
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSupabaseSession } from "../features/auth/hooks/useSupabaseSession";
 import { useChecker } from "../features/writing-checker/hooks/useChecker";
 import { Header } from "../features/writing-checker/components/Header";
@@ -15,6 +16,7 @@ import { OnboardingForm } from "@/features/auth/components/OnboardingForm";
 import { useSupabaseAuthActions } from "@/features/auth/hooks/useSupabaseAuthActions";
 
 export default function Page() {
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { user: supabaseUser, isLoading: isSupabaseLoading } = useSupabaseSession();
   const authActions = useSupabaseAuthActions();
   const onboarding = useOnboardingProfile(supabaseUser);
@@ -31,6 +33,12 @@ export default function Page() {
   const authBusy = isSupabaseLoading || authActions.isSigningIn || authActions.isSigningOut;
   const isOnboardingVisible = Boolean(supabaseUser && onboarding.needsOnboarding);
   const isProfileLoading = Boolean(supabaseUser && onboarding.isLoading);
+
+  useEffect(() => {
+    if (!supabaseUser) {
+      setIsHistoryOpen(false);
+    }
+  }, [supabaseUser]);
 
   const renderMainContent = () => {
     if (isProfileLoading) {
@@ -90,12 +98,29 @@ export default function Page() {
     );
   };
 
+  const sidebarClasses = [
+    "max-h-screen overflow-hidden transition-colors duration-300 md:border-b-0",
+    supabaseUser
+      ? isHistoryOpen
+        ? "border-b border-gray-200 bg-white md:border-r"
+        : "border-transparent bg-transparent"
+      : "border-b border-gray-200 bg-white md:border-r"
+  ].join(" ");
+
+  const gridColumnsClass = supabaseUser
+    ? "md:grid-cols-[auto_minmax(0,1fr)] lg:grid-cols-[auto_minmax(0,1fr)]"
+    : "md:grid-cols-[320px_minmax(0,1fr)] lg:grid-cols-[360px_minmax(0,1fr)]";
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="max-h-screen overflow-hidden border-b border-gray-200 bg-white md:border-b-0 md:border-r">
+      <div className={`grid min-h-screen grid-cols-1 ${gridColumnsClass}`}>
+        <aside className={sidebarClasses}>
           {supabaseUser ? (
-            <ChatHistorySidebar user={supabaseUser} studentId={onboarding.studentId} />
+            <ChatHistorySidebar
+              user={supabaseUser}
+              studentId={onboarding.studentId}
+              onOpenChange={setIsHistoryOpen}
+            />
           ) : (
             <GuestSidebarPrompt isSessionLoading={isSupabaseLoading} />
           )}
