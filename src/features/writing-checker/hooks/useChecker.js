@@ -17,7 +17,8 @@ export function useChecker() {
 
     try {
       const parsed = await submitWritingCheck({ text: studentText });
-      setFeedback(parsed);
+      const feedbackPayload = parsed?.feedback ?? parsed;
+      setFeedback(feedbackPayload);
     } catch (err) {
       console.error("Error checking writing:", err);
       alert(`エラーが発生しました: ${err.message}`);
