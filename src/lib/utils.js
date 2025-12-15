@@ -2,10 +2,6 @@
 
 import { MISTAKE_TYPE_LABELS, MISTAKE_TYPE_COLORS, SCORE_COLORS } from './constants';
 
-export function sanitizeForRegex(str = "") {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 export function getScoreColor(score = 0) {
   if (score >= 80) return SCORE_COLORS.high;
   if (score >= 60) return SCORE_COLORS.medium;

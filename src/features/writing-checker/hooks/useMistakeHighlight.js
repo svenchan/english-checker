@@ -2,103 +2,221 @@
 "use client";
 
 import { useState, useRef, useMemo, useCallback, useEffect } from "react";
-import { sanitizeForRegex } from "@/lib/utils";
+import { normalizeText } from "@/lib/normalizeText";
+import { tokenizeHighlight } from "../lib/tokenizeHighlight";
 
 export function useMistakeHighlight(studentText, mistakes) {
-  const [selectedMistake, setSelectedMistake] = useState(null);
+  const [selectedMistakeId, setSelectedMistakeId] = useState(null);
   const mistakeRefs = useRef({});
 
-  const highlightedSegments = useMemo(() => {
-    const baseText = studentText || "";
+  const highlightModel = useMemo(() => {
     const mistakeList = Array.isArray(mistakes) ? mistakes : [];
+    const normalizedText = normalizeText(studentText || "");
+    const { spans, idsByIndex } = deriveHighlightSpans(normalizedText, mistakeList);
+    const tokens = normalizedText
+      ? tokenizeHighlight(normalizedText, spans)
+      : [];
 
-    if (!baseText || !mistakeList.length) {
-      return baseText ? [{ type: "text", text: baseText }] : [];
-    }
-
-    const matches = [];
-
-    mistakeList
-      .map((mistake, idx) => ({ ...mistake, idx }))
-      .filter((mistake) => mistake.original)
-      .sort((a, b) => (b.original?.length || 0) - (a.original?.length || 0))
-      .forEach((mistake) => {
-        const regex = new RegExp(sanitizeForRegex(mistake.original), "gi");
-        let match;
-        while ((match = regex.exec(baseText)) !== null) {
-          matches.push({
-            start: match.index,
-            end: match.index + match[0].length,
-            text: baseText.slice(match.index, match.index + match[0].length),
-            mistakeId: mistake.idx
-          });
-
-          // Avoid infinite loops on zero-width matches
-          if (match.index === regex.lastIndex) {
-            regex.lastIndex++;
-          }
-        }
-      });
-
-    if (!matches.length) {
-      return [{ type: "text", text: baseText }];
-    }
-
-    matches.sort((a, b) => {
-      if (a.start === b.start) {
-        return b.end - a.end;
-      }
-      return a.start - b.start;
-    });
-
-    const segments = [];
-    let cursor = 0;
-
-    matches.forEach((match) => {
-      if (match.start < cursor) {
-        return; // skip overlaps that were already consumed by longer matches
-      }
-
-      if (match.start > cursor) {
-        segments.push({ type: "text", text: baseText.slice(cursor, match.start) });
-      }
-
-      segments.push({ type: "mistake", text: match.text, mistakeId: match.mistakeId });
-      cursor = match.end;
-    });
-
-    if (cursor < baseText.length) {
-      segments.push({ type: "text", text: baseText.slice(cursor) });
-    }
-
-    return segments;
+    return {
+      normalizedText,
+      spans,
+      tokens,
+      idsByIndex
+    };
   }, [studentText, mistakes]);
 
   useEffect(() => {
-    setSelectedMistake(null);
+    setSelectedMistakeId(null);
     mistakeRefs.current = {};
   }, [studentText, mistakes]);
 
   const handleHighlightClick = useCallback(
     (mistakeId) => {
-      if (typeof mistakeId !== "number" || Number.isNaN(mistakeId)) {
+      if (!mistakeId) {
         return;
       }
 
-      setSelectedMistake(mistakeId);
+      setSelectedMistakeId(mistakeId);
       const target = mistakeRefs.current[mistakeId];
       if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     },
-    [mistakeRefs]
+    []
+  );
+
+  const getMistakeIdForIndex = useCallback(
+    (index) => highlightModel.idsByIndex[index] ?? String(index),
+    [highlightModel.idsByIndex]
   );
 
   return {
-    selectedMistake,
-    setSelectedMistake,
+    selectedMistakeId,
+    setSelectedMistakeId,
     mistakeRefs,
-    highlightedSegments,
-    handleHighlightClick
+    tokens: highlightModel.tokens,
+    handleHighlightClick,
+    getMistakeIdForIndex
   };
+}
+
+function deriveHighlightSpans(baseText, mistakes) {
+  const idsByIndex = [];
+  const spans = [];
+  const substringEntries = [];
+  const length = baseText.length;
+  const lowerText = baseText.toLowerCase();
+
+  mistakes.forEach((mistake, idx) => {
+    const id = getMistakeIdentifier(mistake, idx);
+    const category = mistake?.type;
+    idsByIndex[idx] = id;
+
+    const explicitRange = readExplicitRange(mistake);
+    if (explicitRange) {
+      const clamped = clampRange(explicitRange, length);
+      if (clamped) {
+        spans.push({ id, category, ...clamped });
+      }
+      return;
+    }
+
+    const normalizedOriginal = normalizeText(mistake?.original || "");
+    if (!normalizedOriginal) {
+      return;
+    }
+
+    substringEntries.push({
+      id,
+      category,
+      needle: normalizedOriginal,
+      needleLower: normalizedOriginal.toLowerCase()
+    });
+  });
+
+  if (length && substringEntries.length) {
+    const taken = spans.map((span) => ({ start: span.start, end: span.end }));
+    const sortedEntries = substringEntries.sort((a, b) => {
+      if (a.needle.length === b.needle.length) {
+        return a.id.localeCompare(b.id);
+      }
+      return b.needle.length - a.needle.length;
+    });
+
+    sortedEntries.forEach((entry) => {
+      const match = findFirstNonOverlappingMatch(lowerText, entry.needleLower, taken);
+      if (match) {
+        spans.push({
+          id: entry.id,
+          category: entry.category,
+          start: match.start,
+          end: match.end
+        });
+        taken.push(match);
+      }
+    });
+  }
+
+  return { spans, idsByIndex };
+}
+
+function getMistakeIdentifier(mistake, fallbackIndex) {
+  if (mistake && typeof mistake === "object") {
+    if (typeof mistake.id === "string" && mistake.id.trim()) {
+      return mistake.id;
+    }
+    if (typeof mistake.mistakeId === "string" && mistake.mistakeId.trim()) {
+      return mistake.mistakeId;
+    }
+    if (typeof mistake.index === "number" && Number.isFinite(mistake.index)) {
+      return String(mistake.index);
+    }
+  }
+
+  return String(fallbackIndex);
+}
+
+function readExplicitRange(mistake) {
+  const start = readNumeric(
+    mistake?.start ??
+      mistake?.begin ??
+      mistake?.position?.start ??
+      mistake?.indices?.start
+  );
+  const end = readNumeric(
+    mistake?.end ??
+      mistake?.finish ??
+      mistake?.position?.end ??
+      mistake?.indices?.end
+  );
+
+  if (typeof start === "number" && typeof end === "number") {
+    return { start, end };
+  }
+
+  return null;
+}
+
+function readNumeric(value) {
+  if (typeof value !== "number") {
+    return null;
+  }
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+  return value;
+}
+
+function clampRange(range, max) {
+  const start = clampIndex(range.start, max);
+  const end = clampIndex(range.end, max);
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
+    return null;
+  }
+
+  return { start, end };
+}
+
+function clampIndex(value, max) {
+  if (!Number.isFinite(value)) {
+    return NaN;
+  }
+  if (value < 0) {
+    return 0;
+  }
+  if (value > max) {
+    return max;
+  }
+  return value;
+}
+
+function findFirstNonOverlappingMatch(baseLowerText, needleLowerText, taken) {
+  if (!needleLowerText) {
+    return null;
+  }
+
+  let cursor = 0;
+  const maxIndex = baseLowerText.length - needleLowerText.length;
+
+  while (cursor <= maxIndex) {
+    const matchIndex = baseLowerText.indexOf(needleLowerText, cursor);
+    if (matchIndex === -1) {
+      break;
+    }
+
+    const candidate = { start: matchIndex, end: matchIndex + needleLowerText.length };
+    const overlaps = taken.some((occupied) => rangesOverlap(candidate, occupied));
+    if (!overlaps) {
+      return candidate;
+    }
+
+    cursor = matchIndex + 1;
+  }
+
+  return null;
+}
+
+function rangesOverlap(a, b) {
+  return a.start < b.end && b.start < a.end;
 }

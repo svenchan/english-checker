@@ -49,7 +49,12 @@ function renderCorrectedWithBold(original, corrected) {
 }
 
 export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback }) {
-  const { selectedMistake, setSelectedMistake, mistakeRefs } = mistakeHighlight;
+  const {
+    selectedMistakeId,
+    setSelectedMistakeId,
+    mistakeRefs,
+    getMistakeIdForIndex
+  } = mistakeHighlight;
   const [copySuccess, setCopySuccess] = useState(false);
 
   // Show level-up card only when there are no mistakes
@@ -66,20 +71,28 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback 
       </h3>
 
       <div className="space-y-4">
-        {mistakes.map((mistake, idx) => (
-          <div
-            key={idx}
-            ref={(el) => (mistakeRefs.current[idx] = el)}
-            className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
-              selectedMistake === idx ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"
-            }`}
-            onClick={() => {
-              setSelectedMistake(idx);
-              if (mistakeRefs.current[idx]) {
-                mistakeRefs.current[idx].scrollIntoView({ behavior: "smooth", block: "center" });
-              }
-            }}
-          >
+        {mistakes.map((mistake, idx) => {
+          const mistakeId = getMistakeIdForIndex(idx);
+          return (
+            <div
+              key={mistakeId}
+              ref={(el) => {
+                if (el) {
+                  mistakeRefs.current[mistakeId] = el;
+                } else {
+                  delete mistakeRefs.current[mistakeId];
+                }
+              }}
+              className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
+                selectedMistakeId === mistakeId ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"
+              }`}
+              onClick={() => {
+                setSelectedMistakeId(mistakeId);
+                if (mistakeRefs.current[mistakeId]) {
+                  mistakeRefs.current[mistakeId].scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+              }}
+            >
             <div className="flex items-start justify-between mb-2">
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${getMistakeTypeColor(mistake.type)}`}>
                 {getMistakeTypeLabel(mistake.type)}
@@ -108,8 +121,9 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback 
                 </p>
               </div>
             </div>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
       {/* Copy button at the bottom-right of the mistake list card */}
       <div className="mt-4 flex justify-end">
