@@ -1,7 +1,7 @@
 # english-checker
 English grammar checker for JHS.
 
-A next.js webapp  that uses AI to help students check their own work and understand their mistakes so they can learn from them. It collects data on mistakes and displays it per class and per student so students and teachers can focus on areas where they strugle the most.
+A Next.js web app that uses AI to help students check their own work and understand their mistakes so they can learn from them. Students now land directly on the checker—no login or class code screen—and the server always uses the single `CLASS11` Groq API key behind the scenes.
 
 Published on vercel app using supabase for logging mistakes and writing.
 
@@ -28,65 +28,39 @@ Published on vercel app using supabase for logging mistakes and writing.
 ├── src/                             # Main source directory
 │   ├── app/                         # Next.js app router
 │   │   ├── layout.js
-│   │   ├── page.js
-│   │   ├── api/
-│   │   │   └── check/
-│   │   └── (auth)/                  # Route groups for organization
-│   │       ├── layout.js
-│   │       └── login/
+│   │   ├── page.js                  # Main checker UI (no auth gate)
+│   │   └── api/
+│   │       └── check/               # Single API route that talks to Groq
 │   │
-│   ├── features/                    # Feature-based modules (key change!)
-│   │   ├── writing-checker/
-│   │   │   ├── components/
-│   │   │   │   ├── WritingInput.js
-│   │   │   │   ├── FeedbackDisplay.js
-│   │   │   │   ├── MistakeList.js
-│   │   │   │   └── Header.js
-│   │   │   ├── hooks/
-│   │   │   │   ├── useChecker.js
-│   │   │   │   └── useMistakeHighlight.js
-│   │   │   ├── services/            # API calls specific to this feature
-│   │   │   │   └── checkingService.js
-│   │   │   ├── types/               # TypeScript types (or JSDoc)
-│   │   │   │   └── checker.types.js
-│   │   │   └── constants.js
-│   │   │
-│   │   └── auth/
+│   ├── features/
+│   │   └── writing-checker/         # Input, feedback UI, and hooks
 │   │       ├── components/
-│   │       │   └── LoginForm.js
 │   │       ├── hooks/
-│   │       │   └── useAuth.js
 │   │       ├── services/
-│   │       │   └── authService.js
-│   │       └── types/
-│   │           └── auth.types.js
+│   │       ├── types/
+│   │       └── constants.js
 │   │
-│   ├── shared/                      # Reusable across features
-│   │   ├── components/
-│   │   │   └── ui/
-│   │   │       ├── Icons.js
-│   │   │       └── Tooltip.js
-│   │   ├── hooks/
-│   │   │   └── (generic hooks)
-│   │   ├── services/                # Generic utilities
-│   │   │   └── api.js
-│   │   ├── constants/
-│   │   │   └── index.js
-│   │   └── types/
-│   │       └── index.js
+│   ├── shared/                      # Reusable UI + helpers
+│   │   └── components/ui
 │   │
-│   ├── lib/                         # Utility functions
-│   │   ├── utils.js
-│   │   └── validators.js            # Moved from api/utils
+│   ├── lib/                         # Utility functions (sanitizers, validators)
 │   │
-│   └── config/                      # Configuration
-│       ├── prompts.js               # Moved from api/config
-│       ├── classCodeMap.js
-│       ├── errors.js
-│       └── supabase.js              # Moved from lib
+│   └── config/                      # Prompt, error, and Supabase config
 │
 ├── tests/                           # All tests organized by source
 │   ├── unit/
 │   └── integration/
 │
 └── scripts/                         # Utility scripts live here
+
+### Environment variables
+
+Create a `.env.local` with the following keys:
+
+```
+GROQ_API_KEY_11=sk-your-groq-key
+NEXT_PUBLIC_SUPABASE_URL=...        # optional, only if you want Supabase logging
+SUPABASE_SERVICE_ROLE_KEY=...       # optional, only if you log to Supabase
+```
+
+The checker will always call Groq with `GROQ_API_KEY_11` and, when Supabase envs exist, log each submission under the `CLASS11` label for consistency.

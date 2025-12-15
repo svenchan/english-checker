@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { submitWritingCheck } from "../services/checkingService";
 
-export function useChecker(classCode, onAuthError) {
+export function useChecker() {
   const [studentText, setStudentText] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -16,16 +16,11 @@ export function useChecker(classCode, onAuthError) {
     setFeedback(null);
 
     try {
-      const parsed = await submitWritingCheck({ text: studentText, classCode });
+      const parsed = await submitWritingCheck({ text: studentText });
       setFeedback(parsed);
     } catch (err) {
       console.error("Error checking writing:", err);
-      if (err.status === 401 || err.message?.includes("無効なクラスコード")) {
-        alert("クラスコードが正しくありません。もう一度ログインしてください。");
-        onAuthError?.();
-      } else {
-        alert(`エラーが発生しました: ${err.message}`);
-      }
+      alert(`エラーが発生しました: ${err.message}`);
     } finally {
       setIsChecking(false);
     }

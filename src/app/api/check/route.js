@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
 import { enqueue } from "./queue";
-import { getApiKeyForClass, isValidClassCode } from "@/config/classCodeMap";
 import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "@/config/prompts";
 import { ERRORS, HTTP_STATUS } from "@/config/errors";
 import { validateAndFixResponse } from "@/lib/validators";
 import { createServerClient } from "@/config/supabase";
 import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
-import { sanitizeInput, sanitizeClassCode } from "@/lib/sanitize";
+import { sanitizeInput } from "@/lib/sanitize";
+
+const DEFAULT_CLASS_CODE = "CLASS11";
+const CLASS11_API_KEY = process.env.GROQ_API_KEY_11;
 
 export async function POST(req) {
   try {
     const result = await enqueue(req, async (r) => {
       const body = await r.json().catch(() => ({}));
       const text = sanitizeInput(body?.text ?? "");
-      const classCode = sanitizeClassCode(body?.classCode ?? "");
 
       if (!text) {
         return NextResponse.json({ error: ERRORS.NO_TEXT }, { status: HTTP_STATUS.BAD_REQUEST });
@@ -23,16 +24,13 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.TEXT_TOO_LONG }, { status: HTTP_STATUS.BAD_REQUEST });
       }
 
-      if (!classCode) {
-        return NextResponse.json({ error: ERRORS.NO_CLASS_CODE }, { status: HTTP_STATUS.BAD_REQUEST });
+      if (!CLASS11_API_KEY) {
+        console.error("Missing GROQ_API_KEY_11 environment variable");
+        return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
       }
 
-      if (!isValidClassCode(classCode)) {
-        return NextResponse.json({ error: ERRORS.INVALID_CLASS_CODE }, { status: HTTP_STATUS.UNAUTHORIZED });
-      }
-
-  const apiKey = getApiKeyForClass(classCode);
-  const prompt = buildCheckPrompt(text);
+      const apiKey = CLASS11_API_KEY;
+      const prompt = buildCheckPrompt(text);
 
       async function callGroq(options = { useJsonResponseFormat: true }) {
         const body = {
@@ -112,7 +110,7 @@ export async function POST(req) {
           const sanitizedStudentId = sanitizeInput(body?.studentId ?? "") || null;
           const { error } = await supabase.from("writing_logs").insert({
             student_id: sanitizedStudentId,
-            class_code: classCode,
+            class_code: DEFAULT_CLASS_CODE,
             prompt: prompt,
             ai_response: responseText,
             tokens_in: data.usage?.prompt_tokens || 0,

@@ -7,14 +7,12 @@ import { Icons } from "@/shared/components/ui/Icons";
 import {
   COOLDOWN_SECONDS,
   JAPANESE_LOANWORD_SET,
-  MAX_CHAR_COUNT,
-  TEACHER_CODE
+  MAX_CHAR_COUNT
 } from "../constants";
 
-export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, classCode, feedback, onReset }) {
+export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, feedback, onReset }) {
   const [cooldown, setCooldown] = useState(0);
   const [inputWarning, setInputWarning] = useState("");
-  const isTeacher = (classCode || "").toUpperCase() === TEACHER_CODE;
   
   useEffect(() => {
     let interval;
@@ -35,8 +33,7 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
     }
     // Otherwise this acts as "チェックする"
     onCheck();
-    // Only start the 60s cooldown for non-teacher class codes
-    if (!isTeacher) setCooldown(COOLDOWN_SECONDS);
+    setCooldown(COOLDOWN_SECONDS);
   };
 
   const handleTextChange = (newText) => {

@@ -26,8 +26,3 @@ export function sanitizeInput(value, options = {}) {
 
   return normalizeWhitespace(sanitized);
 }
-
-export function sanitizeClassCode(value) {
-  const sanitized = sanitizeInput(value);
-  return sanitized ? sanitized.toUpperCase() : "";
-}

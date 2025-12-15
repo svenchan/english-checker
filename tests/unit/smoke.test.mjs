@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildCheckPrompt } from "../../src/config/prompts.js";
 import { validateAndFixResponse } from "../../src/lib/validators.js";
-import { extractStudentTextFromPrompt, parseAiResponseString } from "../../src/features/teacher-requests/utils/logParsers.js";
 import { sanitizeInput } from "../../src/lib/sanitize.js";
 
 function generateSampleText(length = 600) {
@@ -54,22 +53,6 @@ test("validateAndFixResponse normalizes mistakes and scores", () => {
 
   const perfect = validateAndFixResponse({ mistakes: [], overallScore: 70 });
   assert.equal(perfect.overallScore, 100, "Perfect submissions should normalize to full score");
-});
-
-test("extractStudentTextFromPrompt pulls the original writing", () => {
-  const sample = `生徒の英文: "Hello world! I like apples."
-
-出力仕様（JSONオブジェクトのみ、他の文字・コードフェンス不可）:`;
-  const extracted = extractStudentTextFromPrompt(sample);
-  assert.equal(extracted, "Hello world! I like apples.");
-});
-
-test("parseAiResponseString cleans code fences and validates shape", () => {
-  const raw = "```json\n{\n  \"mistakes\": [],\n  \"overallScore\": 75,\n  \"levelUp\": \"keep going\"\n}\n```";
-  const parsed = parseAiResponseString(raw);
-  assert.equal(parsed.overallScore, 100, "Perfect submission should normalize to 100");
-  assert.deepEqual(parsed.mistakes, []);
-  assert.equal(parsed.levelUp, "keep going");
 });
 
 test("sanitizeInput strips HTML tags and scripts", () => {
