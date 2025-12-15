@@ -13,7 +13,7 @@
     "strict": false,
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
-    "module": "esnext",
+    "module": "Node16",
     "moduleResolution": "node16",
     "resolveJsonModule": true,
     "isolatedModules": true,

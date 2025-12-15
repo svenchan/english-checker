@@ -1,5 +1,5 @@
 import { normalizeText } from "../../../lib/normalizeText.ts";
-import type { HighlightSpan, HighlightToken } from "../types/highlightTokens";
+import type { HighlightSpan, HighlightToken } from "../types/highlightTokens.js";
 
 type InternalSpan = HighlightSpan & {
   start: number;

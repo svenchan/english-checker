@@ -1,6 +1,6 @@
 "use client";
 
-import type { HighlightToken } from "../types/highlightTokens";
+import type { HighlightToken } from "../types/highlightTokens.js";
 
 type HighlightedTextProps = {
   tokens: HighlightToken[];
