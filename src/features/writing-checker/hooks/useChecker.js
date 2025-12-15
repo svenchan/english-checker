@@ -6,12 +6,14 @@ import { submitWritingCheck } from "../services/checkingService";
 import { useGuestSession } from "./useGuestSession";
 import { CHECK_COMPLETED_EVENT } from "../constants";
 
-export function useChecker({ studentId, teacherId } = {}) {
+export function useChecker({ studentId, teacherId, allowGuestFallback = true } = {}) {
   const [studentText, setStudentText] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const guestSessionId = useGuestSession();
-  const isSessionReady = Boolean(studentId || teacherId || guestSessionId);
+  const hasProfileIdentifier = Boolean(studentId || teacherId);
+  const canUseGuest = allowGuestFallback && !hasProfileIdentifier && Boolean(guestSessionId);
+  const isSessionReady = hasProfileIdentifier || canUseGuest;
 
   const checkWriting = async () => {
     if (!studentText.trim() || isChecking || !isSessionReady) return;
@@ -29,8 +31,10 @@ export function useChecker({ studentId, teacherId } = {}) {
         payload.studentId = studentId;
       } else if (teacherId) {
         payload.teacherId = teacherId;
-      } else if (guestSessionId) {
+      } else if (canUseGuest) {
         payload.guestSessionId = guestSessionId;
+      } else {
+        throw new Error("Session identifiers not ready yet.");
       }
 
       console.log("Submitting writing check", {
@@ -55,6 +59,7 @@ export function useChecker({ studentId, teacherId } = {}) {
           })
         );
       }
+
     } catch (err) {
       console.error("Error checking writing:", err);
       alert(`エラーが発生しました: ${err.message}`);

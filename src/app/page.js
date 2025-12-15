@@ -22,7 +22,8 @@ export default function Page() {
   const onboarding = useOnboardingProfile(supabaseUser);
   const checker = useChecker({
     studentId: onboarding.studentId,
-    teacherId: onboarding.teacherId
+    teacherId: onboarding.teacherId,
+    allowGuestFallback: !supabaseUser
   });
 
   const mistakeHighlight = useMistakeHighlight(

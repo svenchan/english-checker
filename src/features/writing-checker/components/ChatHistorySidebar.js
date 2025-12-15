@@ -53,8 +53,10 @@ export function ChatHistorySidebar({ user, studentId, onOpenChange }) {
   const [error, setError] = useState("");
   const [hasStudentProfile, setHasStudentProfile] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [hasFetchedInitial, setHasFetchedInitial] = useState(false);
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const sidebarRef = useRef(null);
+  const lastStudentIdRef = useRef(null);
 
   useEffect(() => {
     console.log("[ChatHistorySidebar] Component mounted with studentId:", studentId);
@@ -135,20 +137,22 @@ export function ChatHistorySidebar({ user, studentId, onOpenChange }) {
       }
 
       setHasStudentProfile(true);
-      const data = Array.isArray(payload)
+      const rawData = Array.isArray(payload)
         ? payload
         : Array.isArray(payload?.data)
           ? payload.data
           : [];
 
-      if (!Array.isArray(data)) {
+      if (!Array.isArray(rawData)) {
         console.warn("[loadLogs] Unable to normalize payload into logs array. Using empty list.");
       }
 
-      console.log("[loadLogs] API returned logs:", data);
-      console.log("[loadLogs] Total logs from API:", data.length);
-      setLogs(data);
-      return data;
+      const normalizedLogs = Array.isArray(rawData) ? rawData.slice(0, HISTORY_LIMIT) : [];
+
+      console.log("[loadLogs] API returned logs:", normalizedLogs);
+      console.log("[loadLogs] Total logs from API:", normalizedLogs.length);
+      setLogs(normalizedLogs);
+      return normalizedLogs;
     } catch (err) {
       console.error("Failed to load chat history", err);
       setError(err.message || "履歴の取得に失敗しました");
@@ -157,39 +161,6 @@ export function ChatHistorySidebar({ user, studentId, onOpenChange }) {
       setIsLoading(false);
     }
   }, [studentId, supabase, user]);
-
-  useEffect(() => {
-    if (!user) {
-      setLogs([]);
-      setIsLoading(false);
-      return;
-    }
-
-    if (!supabase) {
-      setError("Supabase is not configured");
-      setIsLoading(false);
-      return;
-    }
-
-    if (!studentId) {
-      console.log("[ChatHistorySidebar] Skipping loadLogs: studentId is falsy");
-      return;
-    }
-
-    console.log("[ChatHistorySidebar] Calling loadLogs with studentId:", studentId);
-
-    loadLogs()
-      .then((result) => {
-        console.log("[ChatHistorySidebar] loadLogs() result:", result);
-        console.log(
-          "[ChatHistorySidebar] Number of logs returned:",
-          Array.isArray(result) ? result.length : "N/A"
-        );
-      })
-      .catch((err) => {
-        console.error("[ChatHistorySidebar] loadLogs() error:", err);
-      });
-  }, [studentId, user, supabase, loadLogs]);
 
   useEffect(() => {
     if (!user || typeof window === "undefined") {
@@ -207,16 +178,9 @@ export function ChatHistorySidebar({ user, studentId, onOpenChange }) {
   }, [loadLogs, user]);
 
   useEffect(() => {
-    if (!studentId) {
-      console.log("[Realtime] Skipping subscription: no studentId");
+    if (!studentId || !user || !supabase) {
       return undefined;
     }
-
-    if (!user || !supabase) {
-      return undefined;
-    }
-
-    console.log("[Realtime] Setting up subscription for studentId:", studentId);
 
     const channel = supabase
       .channel(`writing_logs:student_id=eq.${studentId}`)
@@ -229,9 +193,6 @@ export function ChatHistorySidebar({ user, studentId, onOpenChange }) {
           filter: `student_id=eq.${studentId}`
         },
         (payload) => {
-          console.log("[Realtime] ✓ INSERT event received:", payload);
-          console.log("[Realtime] Event payload.new:", payload?.new);
-
           const latestLog = {
             id: payload?.new?.id,
             prompt: payload?.new?.prompt || "",
@@ -244,18 +205,72 @@ export function ChatHistorySidebar({ user, studentId, onOpenChange }) {
           upsertLog(latestLog);
         }
       )
-      .subscribe((status) => {
-        console.log("[Realtime] Subscription status:", status);
-        if (status === "SUBSCRIBED") {
-          console.log("[Realtime] ✓✓ Successfully subscribed to channel");
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [studentId, supabase, upsertLog, user]);
+
+  useEffect(() => {
+    if (!user) {
+      setLogs([]);
+      setHasStudentProfile(true);
+      setHasFetchedInitial(false);
+      lastStudentIdRef.current = null;
+      setIsLoading(false);
+      return;
+    }
+
+    if (!supabase) {
+      setError("Supabase is not configured");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!studentId) {
+      console.log("[ChatHistorySidebar] Skipping loadLogs: studentId is falsy");
+      return;
+    }
+
+    if (lastStudentIdRef.current !== studentId) {
+      lastStudentIdRef.current = studentId;
+      setHasFetchedInitial(false);
+    }
+  }, [studentId, user, supabase]);
+
+  useEffect(() => {
+    if (!user || !studentId || hasFetchedInitial) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    loadLogs()
+      .then((result) => {
+        console.log("[ChatHistorySidebar] Initial load complete:", result);
+      })
+      .catch((err) => {
+        console.error("[ChatHistorySidebar] Initial load error:", err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setHasFetchedInitial(true);
         }
       });
 
     return () => {
-      console.log("[Realtime] Cleaning up subscription");
-      channel.unsubscribe();
+      isMounted = false;
     };
-  }, [studentId, supabase, upsertLog, user]);
+  }, [user, studentId, hasFetchedInitial, loadLogs]);
+
+  const handleToggleSidebar = () => {
+    const nextIsOpen = !isOpen;
+    if (nextIsOpen && user && studentId) {
+      loadLogs({ showLoading: logs.length === 0 });
+    }
+    setIsOpen(nextIsOpen);
+  };
 
   useEffect(() => {
     onOpenChange?.(isOpen);
@@ -308,7 +323,7 @@ export function ChatHistorySidebar({ user, studentId, onOpenChange }) {
     <div ref={sidebarRef} className={containerClasses}>
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={handleToggleSidebar}
         aria-expanded={isOpen}
         aria-label={toggleButtonLabel}
         className={`flex h-12 w-12 items-center justify-center rounded-full border text-gray-600 shadow-sm transition hover:border-gray-300 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${isOpen ? "bg-gray-900 text-white border-gray-900" : "bg-white border-gray-200"}`}

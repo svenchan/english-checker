@@ -83,61 +83,27 @@ export async function GET(req) {
       return jsonError("Student profile is required before viewing history.", HTTP_STATUS.FORBIDDEN);
     }
 
-    const { data: allLogsForStudent, error: checkError } = await supabase
-      .from("writing_logs")
-      .select("id, created_at, is_guest")
-      .eq("student_id", studentRecord.id);
-
-    console.log("[/api/logs/student] DEBUG - All logs for this student (no filters):", {
-      count: allLogsForStudent?.length,
-      student_id: studentRecord.id,
-      error: checkError,
-      ids: allLogsForStudent?.map((log) => ({
-        id: log.id,
-        is_guest: log.is_guest,
-        created_at: log.created_at
-      }))
-    });
-
-    if (checkError) {
-      return jsonError("Failed to inspect writing history.", HTTP_STATUS.SERVER_ERROR, checkError);
-    }
-
-    const sortedLogIds = (allLogsForStudent || [])
-      .filter((log) => log.is_guest === false)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .slice(0, STUDENT_HISTORY_LIMIT)
-      .map((log) => log.id);
-
-    if (sortedLogIds.length === 0) {
-      console.log("[/api/logs/student] No non-guest logs available for student", studentRecord.id);
-      return NextResponse.json({ data: [] });
-    }
-
-    const { data: historyRowsRaw, error: logsError } = await supabase
+    const { data: historyRows, error: logsError } = await supabase
       .from("writing_logs")
       .select("id, prompt, student_text, created_at")
-      .in("id", sortedLogIds);
+      .eq("student_id", studentRecord.id)
+      .order("created_at", { ascending: false })
+      .limit(STUDENT_HISTORY_LIMIT);
 
     if (logsError) {
       return jsonError("Failed to fetch writing history.", HTTP_STATUS.SERVER_ERROR, logsError);
     }
 
-    const historyRowsMap = new Map((historyRowsRaw || []).map((row) => [row.id, row]));
-    const historyRows = sortedLogIds.map((id) => historyRowsMap.get(id)).filter(Boolean);
-
     console.log("[/api/logs/student] Query details:", {
       studentRecord_id: studentRecord.id,
-      query_filter: `student_id=${studentRecord.id}, is_guest=false`,
       limit: STUDENT_HISTORY_LIMIT,
-      requested_ids: sortedLogIds,
-      results_count: historyRows.length,
-      first_result_id: historyRows[0]?.id,
-      last_result_id: historyRows[historyRows.length - 1]?.id,
-      returned_created_at: historyRows.map((row) => row.created_at)
+      returned_count: historyRows?.length ?? 0,
+      first_result_id: historyRows?.[0]?.id,
+      last_result_id: historyRows?.[historyRows.length - 1]?.id,
+      returned_created_at: (historyRows || []).map((row) => row.created_at)
     });
 
-    return NextResponse.json({ data: historyRows });
+    return NextResponse.json({ data: historyRows || [] });
   } catch (error) {
     console.error("Unexpected student logs failure", error);
     return NextResponse.json(
