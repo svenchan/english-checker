@@ -8,7 +8,8 @@ Published on vercel app using supabase for logging mistakes and writing.
 ## Development
 
 - `npm run dev` — start the Next.js dev server
-- `npm run build` — create a production build
+- `npm run lint` — run ESLint (Next.js + Core Web Vitals rules)
+- `npm run build` — run linting and create a production build
 - `npm test` — run the smoke test suite (Node's built-in test runner)
 
 
