@@ -4,7 +4,7 @@ const CHECK_ENDPOINT = "/api/check";
 
 /**
  * Submit writing for grammar checking.
- * @param {{ text: string }} payload
+ * @param {{ text: string; topicText?: string | null }} payload
  * @returns {Promise<import("../types/checker.types").FeedbackResponse>}
  */
 export async function submitWritingCheck(payload) {

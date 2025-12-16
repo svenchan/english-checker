@@ -6,7 +6,7 @@ export const SYSTEM_MESSAGE = "日本の中学生向け英作文チェッカー�
 
 // CHANGED: Balanced prompt - educational but not too verbose
 // Emphasizes clear explanations with grammar rules
-export function buildCheckPrompt(text) {
+export function buildCheckPrompt(text, topicText = null) {
   // NEW: Limit input to 500 characters to prevent huge prompts
   const limitedText = text.slice(0, 500);
   
@@ -14,8 +14,15 @@ export function buildCheckPrompt(text) {
   if (text.length > 500) {
     console.warn(`Input truncated: ${text.length} → 500 characters`);
   }
+
+  const topicSection = topicText
+    ? `指定トピック: "${topicText}"
+- 学生はこの題材を意識して英文を書きました。文の意味は変えず、文法的な評価にのみこのトピックを活用してください。
+
+`
+    : "";
   
-  return `生徒の英文: "${limitedText}"
+  return `${topicSection}生徒の英文: "${limitedText}"
 
 出力仕様（JSONオブジェクトのみ、他の文字・コードフェンス不可）:
 - keys: mistakes(array), overallScore(number: 0-100), levelUp(string)

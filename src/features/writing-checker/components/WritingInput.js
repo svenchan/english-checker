@@ -9,8 +9,20 @@ import {
   JAPANESE_LOANWORD_SET,
   MAX_CHAR_COUNT
 } from "../constants";
+import { TopicPicker } from "./TopicPicker";
+import { setTopicEnabled } from "../lib/topicState";
 
-export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, feedback, onReset }) {
+export function WritingInput({
+  text,
+  onChange,
+  onCheck,
+  isChecking,
+  isDisabled,
+  feedback,
+  onReset,
+  topic,
+  onTopicChange
+}) {
   const [cooldown, setCooldown] = useState(0);
   const [inputWarning, setInputWarning] = useState("");
   
@@ -94,13 +106,33 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-3">
-        <label className="text-lg font-semibold text-gray-800">
-          英文を書いてください
-        </label>
-        <span className="text-sm text-gray-500">{text.length}/400 · {countWords(text)} 語</span>
+      <div className="mb-3">
+        <div className="flex items-center justify-between">
+          <label className="text-lg font-semibold text-gray-800">
+            英文を書いてください
+          </label>
+          <span className="text-sm text-gray-500">{text.length}/400 · {countWords(text)} 語</span>
+        </div>
+        {!topic?.enabled && typeof onTopicChange === "function" && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() =>
+                onTopicChange((prev) => setTopicEnabled(prev, true))
+              }
+              disabled={isChecking || isDisabled}
+              className="inline-flex items-center rounded-md border border-blue-200 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              テーマを追加
+            </button>
+          </div>
+        )}
       </div>
       
+      {typeof onTopicChange === "function" && (
+        <TopicPicker value={topic} onChange={onTopicChange} />
+      )}
+
       <textarea
         value={text}
         onChange={(e) => handleTextChange(e.target.value)}
@@ -113,7 +145,7 @@ export function WritingInput({ text, onChange, onCheck, isChecking, isDisabled, 
           {inputWarning}
         </p>
       )}
-      
+
       <div className="mt-4 flex justify-end space-x-3">
         <button
           onClick={handlePrimaryClick}

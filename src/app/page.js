@@ -1,20 +1,35 @@
 // app/page.js
 "use client";
 
+import { useState } from "react";
 import { useChecker } from "../features/writing-checker/hooks/useChecker";
 import { Header } from "../features/writing-checker/components/Header";
 import { WritingInput } from "../features/writing-checker/components/WritingInput";
 import { FeedbackDisplay } from "../features/writing-checker/components/FeedbackDisplay";
 import { MistakeList } from "../features/writing-checker/components/MistakeList";
 import { useMistakeHighlight } from "../features/writing-checker/hooks/useMistakeHighlight";
+import {
+  createDefaultTopicState,
+  deriveTopicText
+} from "../features/writing-checker/lib/topicState";
 
 export default function Page() {
   const checker = useChecker();
+  const [topic, setTopic] = useState(() => createDefaultTopicState());
 
   const mistakeHighlight = useMistakeHighlight(
     checker.studentText,
     checker.feedback?.mistakes
   );
+
+  const handleReset = () => {
+    checker.reset();
+  };
+
+  const handleCheck = () => {
+    const topicText = deriveTopicText(topic);
+    checker.checkWriting(topicText);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -27,11 +42,13 @@ export default function Page() {
               <WritingInput
                 text={checker.studentText}
                 onChange={checker.setStudentText}
-                onCheck={checker.checkWriting}
+                onCheck={handleCheck}
                 isChecking={checker.isChecking}
                 isDisabled={!!checker.feedback}
                 feedback={checker.feedback}
-                onReset={checker.reset}
+                onReset={handleReset}
+                topic={topic}
+                onTopicChange={setTopic}
               />
 
               {checker.feedback && (

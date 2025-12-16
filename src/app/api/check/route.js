@@ -7,9 +7,10 @@ import { validateAndFixResponse } from "@/lib/validators";
 import { supabaseAdmin } from "@/config/supabase";
 import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
 import { sanitizeInput } from "@/lib/sanitize";
+import { normalizeTopicText } from "@/lib/normalizeTopicText";
 
 const CLASS11_API_KEY = process.env.GROQ_API_KEY_11;
-const PROMPT_VERSION = "v1";
+const PROMPT_VERSION = "v2_topic";
 const DEFAULT_SCHOOL_ID = "e769da05-74f7-493c-817d-ad4a0f676f62";
 const GUEST_SESSION_COOKIE = "wc_session_id";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
@@ -90,7 +91,8 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
       }
 
-      const prompt = buildCheckPrompt(text);
+      const topicText = normalizeTopicText(body?.topicText ?? body?.topic);
+      const prompt = buildCheckPrompt(text, topicText);
       const owner = resolveOwnerContext(body, sessionInfo.sessionId);
 
       const schoolId = sanitizeOrNull(body?.schoolId) || DEFAULT_SCHOOL_ID;
@@ -102,7 +104,7 @@ export async function POST(req) {
           guest_session_id: owner.guestSessionId,
           school_id: schoolId,
           class_id: sanitizeOrNull(body?.classId),
-          topic_text: sanitizeOrNull(body?.topic ?? body?.topicText),
+          topic_text: topicText,
           student_text: text,
           prompt_version: PROMPT_VERSION
         })

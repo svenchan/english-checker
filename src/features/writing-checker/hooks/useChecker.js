@@ -9,14 +9,18 @@ export function useChecker() {
   const [isChecking, setIsChecking] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
-  const checkWriting = async () => {
+  const checkWriting = async (topicText = null) => {
     if (!studentText.trim() || isChecking) return;
 
     setIsChecking(true);
     setFeedback(null);
 
     try {
-      const parsed = await submitWritingCheck({ text: studentText });
+      const payload = {
+        text: studentText,
+        topicText: topicText ?? null
+      };
+      const parsed = await submitWritingCheck(payload);
       const feedbackPayload = parsed?.feedback ?? parsed;
       setFeedback(feedbackPayload);
     } catch (err) {
