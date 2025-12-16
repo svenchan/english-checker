@@ -71,7 +71,6 @@ export default function Page() {
 
   const handleModeChange = (nextMode) => {
     if (nextMode === mode) return;
-    if (isTestLocked && nextMode !== CHECKER_MODES.TEST) return;
     setMode(nextMode);
   };
 
@@ -139,7 +138,7 @@ export default function Page() {
       <div className="flex flex-col h-screen">
         <Header />
         <div className="flex flex-1">
-          <ModeSidebar activeMode={mode} onModeChange={handleModeChange} isTestLocked={isTestLocked} />
+          <ModeSidebar activeMode={mode} onModeChange={handleModeChange} />
           <div className="flex-1 overflow-y-auto p-6">
             <div className="max-w-4xl mx-auto space-y-6">
               <WritingInput

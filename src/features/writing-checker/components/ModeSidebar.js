@@ -19,27 +19,21 @@ const MODE_CONFIG = [
   }
 ];
 
-export function ModeSidebar({ activeMode, onModeChange, isTestLocked }) {
+export function ModeSidebar({ activeMode, onModeChange }) {
   return (
     <aside className="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-6 space-y-4">
       {MODE_CONFIG.map((mode) => {
         const Icon = mode.icon;
         const isActive = activeMode === mode.id;
-        const isDisabled = isTestLocked && mode.id !== CHECKER_MODES.TEST;
         return (
           <Tooltip
             key={mode.id}
-            content={
-              isDisabled
-                ? "テスト中はモードを切り替えできません"
-                : `${mode.label} — ${mode.description}`
-            }
+            content={`${mode.label} — ${mode.description}`}
             position="right"
           >
             <button
               type="button"
               aria-pressed={isActive}
-              disabled={isDisabled}
               onClick={() => {
                 if (typeof onModeChange === "function") {
                   onModeChange(mode.id);
@@ -49,7 +43,7 @@ export function ModeSidebar({ activeMode, onModeChange, isTestLocked }) {
                 isActive
                   ? "border-blue-600 bg-blue-100 text-blue-700"
                   : "border-gray-200 bg-white text-gray-500 hover:border-blue-300"
-              } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+              }`}
             >
               <Icon className="h-5 w-5" />
               <span className="sr-only">{mode.label}</span>
