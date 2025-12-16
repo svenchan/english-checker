@@ -1,18 +1,20 @@
 // components/checker/WritingInput.js
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { sanitizeClientInput } from "@/lib/clientSanitize";
 import { Icons } from "@/shared/components/ui/Icons";
-import {
-  COOLDOWN_SECONDS,
-  JAPANESE_LOANWORD_SET,
-  MAX_CHAR_COUNT
-} from "../constants";
+import { CHECKER_MODES, TEST_MODE } from "@/config/testMode";
+import { countEffectiveWords } from "@/lib/wordCount";
+import { COOLDOWN_SECONDS, MAX_CHAR_COUNT } from "../constants";
 import { TopicPicker } from "./TopicPicker";
 import { setTopicEnabled } from "../lib/topicState";
 
 export function WritingInput({
+  mode = CHECKER_MODES.PRACTICE,
+  testSession = null,
+  remainingMs = TEST_MODE.durationMs,
+  onTestSessionRestart,
   text,
   onChange,
   onCheck,
@@ -25,7 +27,10 @@ export function WritingInput({
 }) {
   const [cooldown, setCooldown] = useState(0);
   const [inputWarning, setInputWarning] = useState("");
-  
+  const isTestMode = mode === CHECKER_MODES.TEST;
+  const wordCount = useMemo(() => countEffectiveWords(text), [text]);
+  const formattedTimer = useMemo(() => formatTimer(remainingMs), [remainingMs]);
+
   useEffect(() => {
     let interval;
     if (cooldown > 0) {
@@ -37,13 +42,15 @@ export function WritingInput({
   }, [cooldown]);
 
   const handlePrimaryClick = () => {
-    // If feedback exists, this button acts as "新しく書く"
     if (feedback) {
-      if (cooldown > 0) return; // guarded by disabled too
+      if (cooldown > 0) return;
       onReset?.();
+      if (isTestMode) {
+        onTestSessionRestart?.();
+      }
       return;
     }
-    // Otherwise this acts as "チェックする"
+
     onCheck();
     setCooldown(COOLDOWN_SECONDS);
   };
@@ -66,60 +73,25 @@ export function WritingInput({
     onChange(finalText);
   };
 
-  // Copy action moved to MistakeList/FeedbackDisplay so it's near the results
-
-  const countWords = (text) => {
-    // Split text into words, preserving original case
-    const rawWords = text.split(/\s+/).filter(word => word.length > 0);
-    
-    const words = rawWords.filter((word, index) => {
-      // Remove punctuation and check if it's a valid word
-      const cleanWord = word.replace(/[.,!?;:'"()[\]{}—–-]/g, '');
-      
-      if (!cleanWord) return false;
-      
-      const lowerWord = cleanWord.toLowerCase();
-      
-      // Exclude Japanese loanwords
-      if (JAPANESE_LOANWORD_SET.has(lowerWord)) {
-        return false;
-      }
-      
-      // Only filter proper nouns if they're capitalized AND not at the start of a sentence
-      // A word is at the start of a sentence if it's the first word or follows sentence-ending punctuation
-      const isProbablyStartOfSentence = index === 0 || /[.!?]$/.test(rawWords[index - 1]);
-      
-      // Exception: always count "I"
-      if (lowerWord === 'i') {
-        return true;
-      }
-      
-      if (!isProbablyStartOfSentence && cleanWord[0] === cleanWord[0].toUpperCase() && cleanWord[0] !== cleanWord[0].toLowerCase()) {
-        return false;
-      }
-      
-      return lowerWord.length > 0;
-    });
-    
-    return words.length;
-  };
+  const canSubmit = isTestMode || text.trim().length > 0;
+  const submitDisabled = feedback
+    ? isChecking || cooldown > 0
+    : isChecking || !canSubmit || (isTestMode && !testSession);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="mb-3">
         <div className="flex items-center justify-between">
-          <label className="text-lg font-semibold text-gray-800">
-            英文を書いてください
-          </label>
-          <span className="text-sm text-gray-500">{text.length}/400 · {countWords(text)} 語</span>
+          <label className="text-lg font-semibold text-gray-800">英文を書いてください</label>
+          <span className="text-sm text-gray-500">
+            {text.length}/400 · {wordCount} 語
+          </span>
         </div>
-        {!topic?.enabled && typeof onTopicChange === "function" && (
+        {!isTestMode && !topic?.enabled && typeof onTopicChange === "function" && (
           <div className="mt-2">
             <button
               type="button"
-              onClick={() =>
-                onTopicChange((prev) => setTopicEnabled(prev, true))
-              }
+              onClick={() => onTopicChange((prev) => setTopicEnabled(prev, true))}
               disabled={isChecking || isDisabled}
               className="inline-flex items-center rounded-md border border-blue-200 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -128,15 +100,41 @@ export function WritingInput({
           </div>
         )}
       </div>
-      
-      {typeof onTopicChange === "function" && (
+
+      {isTestMode && (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-blue-700">お題</p>
+              <p className="mt-1 text-base font-semibold text-gray-900 whitespace-pre-wrap break-words">
+                {testSession?.topic || "トピックを読み込み中..."}
+              </p>
+            </div>
+            <div
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
+                testSession?.submitted ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              <Icons.Clock className="h-4 w-4" />
+              <span>{formattedTimer}</span>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-blue-700">
+            {testSession?.submitted
+              ? "提出済みです。「新しく書く」で次のテストに進めます。"
+              : "5分以内に仕上げてください。時間になると自動で提出されます。"}
+          </p>
+        </div>
+      )}
+
+      {!isTestMode && typeof onTopicChange === "function" && (
         <TopicPicker value={topic} onChange={onTopicChange} />
       )}
 
       <textarea
         value={text}
         onChange={(e) => handleTextChange(e.target.value)}
-        placeholder={`例: I go to school yesterday. ここに英文を入力してください...`}
+        placeholder="例: I go to school yesterday. ここに英文を入力してください..."
         className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
         disabled={isChecking || isDisabled}
       />
@@ -149,7 +147,7 @@ export function WritingInput({
       <div className="mt-4 flex justify-end space-x-3">
         <button
           onClick={handlePrimaryClick}
-          disabled={feedback ? (isChecking || cooldown > 0) : (isChecking || !text.trim())}
+          disabled={submitDisabled}
           className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
         >
           {isChecking ? (
@@ -172,11 +170,18 @@ export function WritingInput({
           ) : (
             <>
               <Icons.Send className="h-5 w-5" />
-              <span>チェックする</span>
+              <span>{isTestMode ? "提出する" : "チェックする"}</span>
             </>
           )}
         </button>
       </div>
     </div>
   );
+}
+
+function formatTimer(ms = 0) {
+  const safeMs = Math.max(0, ms);
+  const minutes = Math.floor(safeMs / 60000);
+  const seconds = Math.floor((safeMs % 60000) / 1000);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }

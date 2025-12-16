@@ -5,6 +5,7 @@
 export const ERRORS = {
   NO_TEXT: 'テキストが必要です',
   TEXT_TOO_LONG: 'テキストは400文字以内で入力してください',
+  NO_TOPIC: 'テストモードではテーマが必要です',
   NO_CLASS_CODE: 'クラスコードが必要です',
   INVALID_CLASS_CODE: '無効なクラスコードです',
   GROQ_API_ERROR: 'AI サービスでエラーが発生しました',

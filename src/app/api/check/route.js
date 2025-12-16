@@ -8,6 +8,8 @@ import { supabaseAdmin } from "@/config/supabase";
 import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
 import { sanitizeInput } from "@/lib/sanitize";
 import { normalizeTopicText } from "@/lib/normalizeTopicText";
+import { CHECKER_MODES, TEST_MODE, buildTooShortFeedback } from "@/config/testMode";
+import { countEffectiveWords } from "@/lib/wordCount";
 
 const CLASS11_API_KEY = process.env.GROQ_API_KEY_11;
 const PROMPT_VERSION = "v2_topic";
@@ -77,8 +79,16 @@ export async function POST(req) {
     const response = await enqueue(req, async (r) => {
       const body = await r.json().catch(() => ({}));
       const text = sanitizeInput(body?.text ?? "");
+      const requestedMode =
+        body?.mode === CHECKER_MODES.TEST ? CHECKER_MODES.TEST : CHECKER_MODES.PRACTICE;
+      const isTestMode = requestedMode === CHECKER_MODES.TEST;
 
-      if (!text) {
+      const topicText = normalizeTopicText(body?.topicText ?? body?.topic);
+      if (isTestMode && !topicText) {
+        return NextResponse.json({ error: ERRORS.NO_TOPIC }, { status: HTTP_STATUS.BAD_REQUEST });
+      }
+
+      if (!text && !isTestMode) {
         return NextResponse.json({ error: ERRORS.NO_TEXT }, { status: HTTP_STATUS.BAD_REQUEST });
       }
 
@@ -91,9 +101,10 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
       }
 
-      const topicText = normalizeTopicText(body?.topicText ?? body?.topic);
       const prompt = buildCheckPrompt(text, topicText);
       const owner = resolveOwnerContext(body, sessionInfo.sessionId);
+      const promptVersion = isTestMode ? TEST_MODE.promptVersion : PROMPT_VERSION;
+      const wordCount = countEffectiveWords(text);
 
       const schoolId = sanitizeOrNull(body?.schoolId) || DEFAULT_SCHOOL_ID;
       const { data: submission, error: submissionError } = await supabaseAdmin
@@ -106,7 +117,8 @@ export async function POST(req) {
           class_id: sanitizeOrNull(body?.classId),
           topic_text: topicText,
           student_text: text,
-          prompt_version: PROMPT_VERSION
+          prompt_version: promptVersion,
+          test_mode: isTestMode
         })
         .select()
         .single();
@@ -114,6 +126,18 @@ export async function POST(req) {
       if (submissionError || !submission) {
         console.error("Failed to insert writing_submissions:", submissionError);
         return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
+      }
+
+      if (isTestMode && wordCount < TEST_MODE.minWords) {
+        const tooShortFeedback = buildTooShortFeedback(topicText);
+        await updateSubmissionStatus(submission.id, "too_short");
+        return NextResponse.json(
+          {
+            submissionId: submission.id,
+            feedback: tooShortFeedback
+          },
+          { status: HTTP_STATUS.OK }
+        );
       }
 
       try {
@@ -195,6 +219,8 @@ export async function POST(req) {
         parsedFeedback = validateAndFixResponse(parsedFeedback, {
           expectTopicFeedback: Boolean(topicText)
         });
+        parsedFeedback.mode = requestedMode;
+        parsedFeedback.status = "ok";
 
         const aiResult = {
           feedback: parsedFeedback,

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildCheckPrompt } from "../../src/config/prompts.js";
+import { CHECKER_MODES, buildTooShortFeedback } from "../../src/config/testMode.js";
 import { validateAndFixResponse } from "../../src/lib/validators.js";
 import { sanitizeInput } from "../../src/lib/sanitize.js";
 
@@ -73,4 +74,13 @@ test("sanitizeInput strips HTML tags and scripts", () => {
   const unsafe = '<script>alert("x")</script><div>Hello <b>world</b>!</div>';
   const sanitized = sanitizeInput(unsafe);
   assert.equal(sanitized, "Hello world!");
+});
+
+test("buildTooShortFeedback returns deterministic payload", () => {
+  const feedback = buildTooShortFeedback("Sample Topic", CHECKER_MODES.TEST);
+  assert.equal(feedback.status, "too_short");
+  assert.equal(feedback.topicText, "Sample Topic");
+  assert.equal(feedback.mode, CHECKER_MODES.TEST);
+  assert.equal(feedback.mistakes.length, 0);
+  assert.ok(feedback.pointsForImprovement.length > 0);
 });

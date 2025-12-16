@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { getScoreColor, buildCopyText } from "@/lib/utils";
+import { TEST_MODE } from "@/config/testMode";
 import { Icons } from "@/shared/components/ui/Icons";
 import { Tooltip } from "@/shared/components/ui/Tooltip";
 import { HighlightedText } from "./HighlightedText";
@@ -11,22 +12,39 @@ export function FeedbackDisplay({ feedback, studentText, mistakeHighlight }) {
   const { tokens, handleHighlightClick, selectedMistakeId } = mistakeHighlight;
 
   const hasNoMistakes = (feedback?.mistakes?.length || 0) === 0;
+  const isTooShort = feedback?.status === "too_short";
+  const scoreColor = isTooShort
+    ? "text-amber-700 bg-amber-100"
+    : getScoreColor(feedback.overallScore);
+  const scoreDisplay = isTooShort ? "未採点" : `${feedback.overallScore}点`;
+  const summaryText = isTooShort
+    ? "15語未満のため採点できませんでした。"
+    : hasNoMistakes
+      ? "完璧です!間違いはありません。"
+      : `${feedback.mistakes.length}個の改善点が見つかりました。`;
+  const tooShortMessage =
+    isTooShort &&
+    (feedback?.improvementSummary ||
+      feedback?.pointsForImprovement?.[0] ||
+      TEST_MODE.tooShortMessage);
   const [copySuccess, setCopySuccess] = useState(false);
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex items-center space-x-4 mb-6">
-        <div className={`px-6 py-3 rounded-lg text-2xl font-bold ${getScoreColor(feedback.overallScore)}`}>
-          {feedback.overallScore}点
+        <div className={`px-6 py-3 rounded-lg text-2xl font-bold ${scoreColor}`}>
+          {scoreDisplay}
         </div>
         <div>
-          <p className="text-sm text-gray-600">
-            {hasNoMistakes
-              ? "完璧です!間違いはありません。"
-              : `${feedback.mistakes.length}個の改善点が見つかりました。`}
-          </p>
+          <p className="text-sm text-gray-600">{summaryText}</p>
         </div>
       </div>
+
+      {tooShortMessage && (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          {tooShortMessage}
+        </div>
+      )}
 
       <div className="mt-2 flex justify-end">
         <Tooltip content={copySuccess ? 'コピーしました！' : 'フィードバックをコピー'} showDelay={100} hideDelay={100} position="top-right">
@@ -52,7 +70,7 @@ export function FeedbackDisplay({ feedback, studentText, mistakeHighlight }) {
         </Tooltip>
       </div>
 
-      {!hasNoMistakes && (
+      {!hasNoMistakes && !isTooShort && (
         <div>
           <h3 className="text-lg font-semibold text-gray-800 mb-3">
             間違いをチェック(赤い部分をクリック)

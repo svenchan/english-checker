@@ -5,12 +5,48 @@
 export function validateAndFixResponse(parsedFeedback, options = {}) {
   const expectTopicFeedback = Boolean(options.expectTopicFeedback);
   // Ensure required fields exist
+  if (!parsedFeedback || typeof parsedFeedback !== "object") {
+    return {
+      overallScore: 0,
+      mistakes: [],
+      goodPoints: [],
+      pointsForImprovement: [],
+      topicFeedback: expectTopicFeedback
+        ? {
+            onTopicSummary: "",
+            prepChecklist: {
+              point: { met: false, note: "" },
+              reason: { met: false, note: "" },
+              evidence: { met: false, note: "" },
+              pointSummary: { met: false, note: "" }
+            },
+            improvementTips: ""
+          }
+        : null,
+      status: "error"
+    };
+  }
   if (!parsedFeedback.mistakes) {
     parsedFeedback.mistakes = [];
   }
   
   if (!parsedFeedback.goodPoints) {
     parsedFeedback.goodPoints = [];
+  }
+  if (!Array.isArray(parsedFeedback.pointsForImprovement)) {
+    parsedFeedback.pointsForImprovement = [];
+  }
+  if (typeof parsedFeedback.summary !== "string") {
+    parsedFeedback.summary = "";
+  }
+  if (typeof parsedFeedback.improvementSummary !== "string") {
+    parsedFeedback.improvementSummary = "";
+  }
+  if (typeof parsedFeedback.status !== "string") {
+    parsedFeedback.status = "ok";
+  }
+  if (typeof parsedFeedback.overallScore !== "number") {
+    parsedFeedback.overallScore = 0;
   }
 
   const defaultPrepChecklist = {

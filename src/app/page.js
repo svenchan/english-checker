@@ -1,7 +1,7 @@
 // app/page.js
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useChecker } from "../features/writing-checker/hooks/useChecker";
 import { Header } from "../features/writing-checker/components/Header";
 import { WritingInput } from "../features/writing-checker/components/WritingInput";
@@ -12,69 +12,166 @@ import {
   createDefaultTopicState,
   deriveTopicText
 } from "../features/writing-checker/lib/topicState";
+import { ModeSidebar } from "../features/writing-checker/components/ModeSidebar";
+import { useTestSession } from "../features/writing-checker/hooks/useTestSession";
+import { CHECKER_MODES, TEST_MODE } from "@/config/testMode";
 
 export default function Page() {
-  const checker = useChecker();
+  const {
+    studentText,
+    setStudentText,
+    isChecking,
+    feedback,
+    checkWriting,
+    reset
+  } = useChecker();
   const [topic, setTopic] = useState(() => createDefaultTopicState());
+  const [mode, setMode] = useState(CHECKER_MODES.PRACTICE);
+  const { session: testSession, remainingMs, startNewSession, markSubmitted } = useTestSession(mode);
   const feedbackSectionRef = useRef(null);
 
-  const mistakeHighlight = useMistakeHighlight(
-    checker.studentText,
-    checker.feedback?.mistakes
-  );
+  const mistakeHighlight = useMistakeHighlight(studentText, feedback?.mistakes);
+  const isTestLocked = mode === CHECKER_MODES.TEST && testSession && !testSession.submitted;
+
+  const previousModeRef = useRef(mode);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const storedMode = window.sessionStorage.getItem(TEST_MODE.uiModeStorageKey);
+    if (storedMode === CHECKER_MODES.TEST) {
+      setMode(CHECKER_MODES.TEST);
+      previousModeRef.current = CHECKER_MODES.TEST;
+    }
+  }, []);
 
   useEffect(() => {
-    if (checker.feedback && feedbackSectionRef.current) {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(TEST_MODE.uiModeStorageKey, mode);
+  }, [mode]);
+
+  useEffect(() => {
+    if (previousModeRef.current !== mode) {
+      if (
+        mode === CHECKER_MODES.TEST &&
+        previousModeRef.current === CHECKER_MODES.PRACTICE
+      ) {
+        reset();
+      }
+      previousModeRef.current = mode;
+    }
+  }, [mode, reset]);
+
+  useEffect(() => {
+    if (feedback && feedbackSectionRef.current) {
       feedbackSectionRef.current.scrollIntoView({
         behavior: "smooth",
         block: "start"
       });
     }
-  }, [checker.feedback]);
+  }, [feedback]);
 
-  const handleReset = () => {
-    checker.reset();
+  const handleModeChange = (nextMode) => {
+    if (nextMode === mode) return;
+    if (isTestLocked && nextMode !== CHECKER_MODES.TEST) return;
+    setMode(nextMode);
   };
 
-  const handleCheck = () => {
+  const handleReset = () => {
+    reset();
+  };
+
+  const handlePracticeSubmit = async () => {
     const topicText = deriveTopicText(topic);
-    checker.checkWriting(topicText);
+    await checkWriting({ topicText, mode: CHECKER_MODES.PRACTICE });
+  };
+
+  const handleTestSubmit = useCallback(
+    async (trigger = "manual") => {
+      if (mode !== CHECKER_MODES.TEST || !testSession || testSession.submitted) {
+        return;
+      }
+
+      try {
+        await checkWriting({
+          topicText: testSession.topic,
+          mode: CHECKER_MODES.TEST,
+          metadata: {
+            trigger,
+            testSessionId: testSession.id
+          }
+        });
+        markSubmitted();
+      } catch (error) {
+        console.error("テストモードの提出に失敗しました", error);
+      }
+    },
+    [checkWriting, markSubmitted, mode, testSession]
+  );
+
+  useEffect(() => {
+    if (!testSession || testSession.submitted) {
+      return;
+    }
+    const remaining = Math.max(0, testSession.endsAt - Date.now());
+    if (remaining <= 0) {
+      handleTestSubmit("auto");
+      return;
+    }
+    const timeout = setTimeout(() => handleTestSubmit("auto"), remaining);
+    return () => clearTimeout(timeout);
+  }, [handleTestSubmit, testSession]);
+
+  const handleCheck = async () => {
+    if (mode === CHECKER_MODES.TEST) {
+      await handleTestSubmit("manual");
+    } else {
+      await handlePracticeSubmit();
+    }
+  };
+
+  const handleTestSessionRestart = () => {
+    if (mode === CHECKER_MODES.TEST) {
+      startNewSession();
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex h-screen">
-        <div className="flex-1 flex flex-col">
-          <Header />
-
+      <div className="flex flex-col h-screen">
+        <Header />
+        <div className="flex flex-1">
+          <ModeSidebar activeMode={mode} onModeChange={handleModeChange} isTestLocked={isTestLocked} />
           <div className="flex-1 overflow-y-auto p-6">
             <div className="max-w-4xl mx-auto space-y-6">
               <WritingInput
-                text={checker.studentText}
-                onChange={checker.setStudentText}
+                mode={mode}
+                testSession={mode === CHECKER_MODES.TEST ? testSession : null}
+                remainingMs={mode === CHECKER_MODES.TEST ? remainingMs : TEST_MODE.durationMs}
+                onTestSessionRestart={handleTestSessionRestart}
+                text={studentText}
+                onChange={setStudentText}
                 onCheck={handleCheck}
-                isChecking={checker.isChecking}
-                isDisabled={!!checker.feedback}
-                feedback={checker.feedback}
+                isChecking={isChecking}
+                isDisabled={!!feedback}
+                feedback={feedback}
                 onReset={handleReset}
                 topic={topic}
-                onTopicChange={setTopic}
+                onTopicChange={mode === CHECKER_MODES.PRACTICE ? setTopic : undefined}
               />
 
-              {checker.feedback && (
+              {feedback && (
                 <>
                   <div ref={feedbackSectionRef}>
                     <FeedbackDisplay
-                      feedback={checker.feedback}
-                      studentText={checker.studentText}
+                      feedback={feedback}
+                      studentText={studentText}
                       mistakeHighlight={mistakeHighlight}
                     />
                   </div>
                   <MistakeList
-                    mistakes={checker.feedback.mistakes}
-                    studentText={checker.studentText}
+                    mistakes={feedback.mistakes}
+                    studentText={studentText}
                     mistakeHighlight={mistakeHighlight}
-                    feedback={checker.feedback}
+                    feedback={feedback}
                   />
                 </>
               )}
