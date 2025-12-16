@@ -25,7 +25,7 @@ export function buildCheckPrompt(text, topicText = null) {
   return `${topicSection}生徒の英文: "${limitedText}"
 
 出力仕様（JSONオブジェクトのみ、他の文字・コードフェンス不可）:
-- keys: mistakes(array), overallScore(number: 0-100), levelUp(string), topicFeedback(object)
+- keys: mistakes(array), overallScore(number: 0-100), topicFeedback(object)
 - mistakes[].type は "grammar" | "vocabulary" | "spelling" のいずれか
 - ミスがなければ mistakes は [] にする
 - topicFeedback には以下のフィールドを含める:
@@ -52,7 +52,6 @@ export function buildCheckPrompt(text, topicText = null) {
     }
   ],
   "overallScore": 85,
-  "levelUp": "時制の一致を復習しましょう。短い英文でも主語と動詞の形を意識するとさらに良くなります。",
   "topicFeedback": {
     "onTopicSummary": "テーマに沿っており、自己紹介が明確でした。",
     "prepChecklist": {
@@ -68,7 +67,7 @@ export function buildCheckPrompt(text, topicText = null) {
 厳守ルール:
 1. 文法的に正しい英文は間違いとして出力しない
 2. 指摘は文法エラーと綴りミスのみ
-3. 内容の追加・変更、語彙の言い換え、より自然な表現提案は mistakes に含めない（levelUp に記載）
+3. 内容の追加・変更、語彙の言い換え、より自然な表現提案は mistakes に含めない
 
 注意:
 - JSON以外の文字列やコードフェンスは出力しない

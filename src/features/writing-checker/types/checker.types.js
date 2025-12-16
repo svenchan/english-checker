@@ -9,17 +9,10 @@
  */
 
 /**
- * @typedef {Object} LevelUpAdvice
- * @property {string} summary - Short guidance when no mistakes are found.
- * @property {string[]} [examples] - Optional example sentences.
- */
-
-/**
  * @typedef {Object} FeedbackResponse
  * @property {number} score - Overall grammar score (0-100).
  * @property {string} summary - Summary of the student's writing quality.
  * @property {Mistake[]} mistakes - List of detected mistakes.
- * @property {LevelUpAdvice | null} [levelUp] - Optional advice shown when no mistakes exist.
  */
 
 export {}; // This file provides shared JSDoc types.

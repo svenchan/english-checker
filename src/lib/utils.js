@@ -40,10 +40,6 @@ export function buildCopyText(text = "", feedback) {
       copyText += `【間違い】\nなし - 完璧です！\n`;
     }
 
-    if (feedback.levelUp) {
-      copyText += `\n【レベルアップ】\n${feedback.levelUp}\n`;
-    }
-
     if (feedback.topicFeedback) {
       copyText += `\n【テーマフィードバック】\n`;
       if (feedback.topicFeedback.onTopicSummary) {

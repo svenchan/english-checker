@@ -77,9 +77,7 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback 
     typeof feedback?.topicText === "string" ? feedback.topicText.trim() : "";
   const shouldShowTopicFeedback = hasTopicFeedback && topicContext.length > 0;
 
-  // Show level-up card only when there are no mistakes
   if (!mistakes || mistakes.length === 0) {
-    // LevelUp is now displayed inside the score box (FeedbackDisplay)
     return null;
   }
 

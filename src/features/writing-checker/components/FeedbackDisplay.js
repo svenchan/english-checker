@@ -11,7 +11,6 @@ export function FeedbackDisplay({ feedback, studentText, mistakeHighlight }) {
   const { tokens, handleHighlightClick, selectedMistakeId } = mistakeHighlight;
 
   const hasNoMistakes = (feedback?.mistakes?.length || 0) === 0;
-  const levelUp = feedback?.levelUp;
   const [copySuccess, setCopySuccess] = useState(false);
 
   return (
@@ -29,41 +28,29 @@ export function FeedbackDisplay({ feedback, studentText, mistakeHighlight }) {
         </div>
       </div>
 
-      {hasNoMistakes && levelUp && (
-        <>
-          <div className="p-4 rounded-lg border-2 border-green-500 bg-green-50 mb-2">
-            <div className="flex items-start mb-2">
-              <Icons.TrendingUp className="h-5 w-5 mr-2 text-green-600 mt-0.5" />
-              <h4 className="text-base font-semibold text-green-800">レベルアップ</h4>
-            </div>
-            <p className="text-sm text-gray-800 mt-2 leading-relaxed">{levelUp}</p>
-          </div>
-          {/* Copy button below LevelUp, bottom-right of the score box */}
-          <div className="mt-2 flex justify-end">
-            <Tooltip content={copySuccess ? 'コピーしました！' : 'フィードバックをコピー'} showDelay={100} hideDelay={100} position="top-right">
-              <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(buildCopyText(studentText, feedback));
-                    setCopySuccess(true);
-                    setTimeout(() => setCopySuccess(false), 2000);
-                  } catch (err) {
-                    console.error("Failed to copy:", err);
-                  }
-                }}
-                className={`flex items-center justify-center px-3 py-3 rounded-lg transition-colors font-medium border ${
-                  copySuccess
-                    ? 'bg-green-600 hover:bg-green-700 text-white border-green-700'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700 border-gray-300'
-                }`}
-                aria-label={copySuccess ? 'コピーしました！' : 'フィードバックをコピー'}
-              >
-                <Icons.Copy className="h-5 w-5" />
-              </button>
-            </Tooltip>
-          </div>
-        </>
-      )}
+      <div className="mt-2 flex justify-end">
+        <Tooltip content={copySuccess ? 'コピーしました！' : 'フィードバックをコピー'} showDelay={100} hideDelay={100} position="top-right">
+          <button
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(buildCopyText(studentText, feedback));
+                setCopySuccess(true);
+                setTimeout(() => setCopySuccess(false), 2000);
+              } catch (err) {
+                console.error("Failed to copy:", err);
+              }
+            }}
+            className={`flex items-center justify-center px-3 py-3 rounded-lg transition-colors font-medium border ${
+              copySuccess
+                ? 'bg-green-600 hover:bg-green-700 text-white border-green-700'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-700 border-gray-300'
+            }`}
+            aria-label={copySuccess ? 'コピーしました！' : 'フィードバックをコピー'}
+          >
+            <Icons.Copy className="h-5 w-5" />
+          </button>
+        </Tooltip>
+      </div>
 
       {!hasNoMistakes && (
         <div>
