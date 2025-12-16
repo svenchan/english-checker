@@ -73,6 +73,9 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback 
         checklistEntries.some(({ key }) => prepChecklist[key])
       )
     );
+  const topicContext =
+    typeof feedback?.topicText === "string" ? feedback.topicText.trim() : "";
+  const shouldShowTopicFeedback = hasTopicFeedback && topicContext.length > 0;
 
   // Show level-up card only when there are no mistakes
   if (!mistakes || mistakes.length === 0) {
@@ -87,7 +90,7 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback 
         改善点リスト
       </h3>
 
-      {hasTopicFeedback && (
+      {shouldShowTopicFeedback && (
         <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
           <div className="flex items-center mb-3">
             <Icons.BookOpen className="h-5 w-5 mr-2 text-blue-600" />

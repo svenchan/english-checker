@@ -56,12 +56,17 @@ test("validateAndFixResponse normalizes mistakes and scores", () => {
 });
 
 test("validateAndFixResponse ensures topicFeedback defaults", () => {
-  const normalized = validateAndFixResponse({ mistakes: [] });
+  const normalized = validateAndFixResponse({ mistakes: [] }, { expectTopicFeedback: true });
   assert.ok(normalized.topicFeedback, "topicFeedback should exist");
   assert.equal(typeof normalized.topicFeedback.onTopicSummary, "string");
   assert.equal(typeof normalized.topicFeedback.improvementTips, "string");
   assert.ok(normalized.topicFeedback.prepChecklist, "prepChecklist should exist");
   assert.equal(typeof normalized.topicFeedback.prepChecklist.point.met, "boolean");
+});
+
+test("validateAndFixResponse omits topicFeedback when not expected", () => {
+  const normalized = validateAndFixResponse({ mistakes: [] }, { expectTopicFeedback: false });
+  assert.equal(normalized.topicFeedback, null);
 });
 
 test("sanitizeInput strips HTML tags and scripts", () => {

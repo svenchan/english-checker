@@ -192,7 +192,9 @@ export async function POST(req) {
             throw new Error(ERRORS.GROQ_API_ERROR);
           }
         }
-        parsedFeedback = validateAndFixResponse(parsedFeedback);
+        parsedFeedback = validateAndFixResponse(parsedFeedback, {
+          expectTopicFeedback: Boolean(topicText)
+        });
 
         const aiResult = {
           feedback: parsedFeedback,
@@ -202,6 +204,10 @@ export async function POST(req) {
           latency: Date.now() - aiStart,
           retries
         };
+
+        if (aiResult.feedback) {
+          aiResult.feedback.topicText = topicText || null;
+        }
 
         const { error: feedbackError } = await supabaseAdmin.from("ai_feedback").insert({
           submission_id: submission.id,

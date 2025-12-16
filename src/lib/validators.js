@@ -2,7 +2,8 @@
  * Validate and fix AI responses
  */
 
-export function validateAndFixResponse(parsedFeedback) {
+export function validateAndFixResponse(parsedFeedback, options = {}) {
+  const expectTopicFeedback = Boolean(options.expectTopicFeedback);
   // Ensure required fields exist
   if (!parsedFeedback.mistakes) {
     parsedFeedback.mistakes = [];
@@ -19,7 +20,9 @@ export function validateAndFixResponse(parsedFeedback) {
     pointSummary: { met: false, note: "" }
   };
 
-  if (!parsedFeedback.topicFeedback || typeof parsedFeedback.topicFeedback !== "object") {
+  if (!expectTopicFeedback) {
+    parsedFeedback.topicFeedback = null;
+  } else if (!parsedFeedback.topicFeedback || typeof parsedFeedback.topicFeedback !== "object") {
     parsedFeedback.topicFeedback = {
       onTopicSummary: "",
       prepChecklist: { ...defaultPrepChecklist },
