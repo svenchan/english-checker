@@ -2,6 +2,7 @@
 
 import { TOPIC_PRESET_GROUPS } from "@/config/topicPresets";
 import { Icons } from "@/shared/components/ui/Icons";
+import { Tooltip } from "@/shared/components/ui/Tooltip";
 import {
   clearTopicState,
   createDefaultTopicState,
@@ -21,6 +22,7 @@ export function TopicPicker({ value, onChange, presetGroups = TOPIC_PRESET_GROUP
   const presetValue = topic.source === TOPIC_SOURCES.PRESET ? topic.value : "";
   const isFreeDisabled = topic.source === TOPIC_SOURCES.PRESET;
   const isPresetDisabled = topic.source === TOPIC_SOURCES.FREE;
+  const canClearFreeText = !!freeTextValue;
 
   const emitChange = (nextState) => {
     if (typeof onChange === "function") {
@@ -29,28 +31,45 @@ export function TopicPicker({ value, onChange, presetGroups = TOPIC_PRESET_GROUP
   };
 
   return (
-    <div className="mt-4 space-y-3">
+    <div className="mt-4 space-y-4">
       <div className="flex items-center justify-between">
         <label className="text-sm font-semibold text-gray-800">テーマ</label>
-        <button
-          type="button"
-          onClick={() => emitChange(removeTopicState())}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-red-100 text-red-600 hover:bg-red-200"
-          aria-label="テーマを削除"
-        >
-          <Icons.Trash className="h-4 w-4" />
-          <span className="sr-only">テーマを削除</span>
-        </button>
+        <Tooltip content="入力済みのテーマを削除します" position="top-right">
+          <button
+            type="button"
+            onClick={() => emitChange(removeTopicState())}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-red-100 text-red-600 hover:bg-red-200"
+            aria-label="テーマを削除"
+          >
+            <Icons.Trash className="h-4 w-4" />
+            <span className="sr-only">テーマを削除</span>
+          </button>
+        </Tooltip>
       </div>
       <p className="text-xs text-gray-500">
         自由入力かリストからの選択、どちらか一方を使ってください。
       </p>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-1">
-          <label className="text-sm text-gray-700" htmlFor="topic-free-input">
-            自由入力
-          </label>
+      <div className="grid gap-4 md:grid-cols-2 items-start">
+        <div className="space-y-2 h-full">
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-gray-700" htmlFor="topic-free-input">
+              自由入力
+            </label>
+            <button
+              type="button"
+              onClick={() => emitChange(clearTopicState())}
+              disabled={!canClearFreeText}
+              className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
+                canClearFreeText
+                  ? "border-blue-200 text-blue-600 hover:bg-blue-50 bg-white"
+                  : "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
+              }`}
+            >
+              <Icons.RefreshCw className="mr-1 h-3.5 w-3.5" />
+              入力をクリア
+            </button>
+          </div>
           <input
             id="topic-free-input"
             type="text"
@@ -60,11 +79,11 @@ export function TopicPicker({ value, onChange, presetGroups = TOPIC_PRESET_GROUP
               emitChange(setTopicFromFreeText(topic, event.target.value))
             }
             placeholder="例: Recycling in my town"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
           />
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1 h-full">
           <label className="text-sm text-gray-700" htmlFor="topic-preset-select">
             定型テーマ
           </label>
@@ -75,7 +94,7 @@ export function TopicPicker({ value, onChange, presetGroups = TOPIC_PRESET_GROUP
             onChange={(event) =>
               emitChange(setTopicFromPreset(topic, event.target.value))
             }
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+            className="w-full rounded-md border border-gray-300 px-3 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
           >
             <option value="">テーマを選択</option>
             {presetGroups.map((group) => (
@@ -91,15 +110,6 @@ export function TopicPicker({ value, onChange, presetGroups = TOPIC_PRESET_GROUP
         </div>
       </div>
 
-      {(topic.source === TOPIC_SOURCES.PRESET || topic.source === TOPIC_SOURCES.FREE) && (
-        <button
-          type="button"
-          className="text-xs text-blue-600 hover:text-blue-700"
-          onClick={() => emitChange(clearTopicState())}
-        >
-          入力をクリア
-        </button>
-      )}
     </div>
   );
 }

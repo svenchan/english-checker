@@ -43,6 +43,32 @@ export function buildCopyText(text = "", feedback) {
     if (feedback.levelUp) {
       copyText += `\n【レベルアップ】\n${feedback.levelUp}\n`;
     }
+
+    if (feedback.topicFeedback) {
+      copyText += `\n【テーマフィードバック】\n`;
+      if (feedback.topicFeedback.onTopicSummary) {
+        copyText += `${feedback.topicFeedback.onTopicSummary}\n`;
+      }
+      if (feedback.topicFeedback.prepChecklist) {
+        const checklist = feedback.topicFeedback.prepChecklist;
+        const labelMap = {
+          point: "P",
+          reason: "R",
+          evidence: "E",
+          pointSummary: "P(まとめ)"
+        };
+        for (const key of Object.keys(labelMap)) {
+          if (checklist[key]) {
+            const statusText = checklist[key].met ? "◯" : "×";
+            const note = checklist[key].note || "";
+            copyText += `${labelMap[key]} ${statusText}: ${note}\n`;
+          }
+        }
+      }
+      if (feedback.topicFeedback.improvementTips) {
+        copyText += `改善のヒント: ${feedback.topicFeedback.improvementTips}\n`;
+      }
+    }
   }
 
   return copyText;

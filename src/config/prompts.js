@@ -17,7 +17,7 @@ export function buildCheckPrompt(text, topicText = null) {
 
   const topicSection = topicText
     ? `指定トピック: "${topicText}"
-- 学生はこの題材を意識して英文を書きました。文の意味は変えず、文法的な評価にのみこのトピックを活用してください。
+- 学生はこの題材を意識して英文を書きました。テーマから外れていないかを必ず確認し、PREPの観点でコメントしてください。
 
 `
     : "";
@@ -25,9 +25,21 @@ export function buildCheckPrompt(text, topicText = null) {
   return `${topicSection}生徒の英文: "${limitedText}"
 
 出力仕様（JSONオブジェクトのみ、他の文字・コードフェンス不可）:
-- keys: mistakes(array), overallScore(number: 0-100), levelUp(string)
+- keys: mistakes(array), overallScore(number: 0-100), levelUp(string), topicFeedback(object)
 - mistakes[].type は "grammar" | "vocabulary" | "spelling" のいずれか
 - ミスがなければ mistakes は [] にする
+- topicFeedback には以下のフィールドを含める:
+  {
+    "onTopicSummary": "テーマに沿って書けているか、外れている場合はどう直すかを1-2文で説明（テーマが無ければそれを明記）",
+    "prepChecklist": {
+      "point": { "met": true/false, "note": "P: 主張に対する評価や例" },
+      "reason": { "met": true/false, "note": "R: 理由の説明" },
+      "evidence": { "met": true/false, "note": "E: 具体例の有無" },
+      "pointSummary": { "met": true/false, "note": "P(まとめ): まとめの評価" }
+    },
+    "improvementTips": "PREPの観点で改善するための追加アドバイス。"
+  }
+- PREP（Point→Reason→Evidence→Point）の流れに沿って、学生の回答がテーマに上手く答えているかを評価する
 
 出力例（値は例。必ず有効なJSONで返す）:
 {
@@ -40,7 +52,17 @@ export function buildCheckPrompt(text, topicText = null) {
     }
   ],
   "overallScore": 85,
-  "levelUp": "時制の一致を復習しましょう。短い英文でも主語と動詞の形を意識するとさらに良くなります。"
+  "levelUp": "時制の一致を復習しましょう。短い英文でも主語と動詞の形を意識するとさらに良くなります。",
+  "topicFeedback": {
+    "onTopicSummary": "テーマに沿っており、自己紹介が明確でした。",
+    "prepChecklist": {
+      "point": { "met": true, "note": "私はテニスが好きです。と主張できています。" },
+      "reason": { "met": true, "note": "好きな理由も述べています。" },
+      "evidence": { "met": false, "note": "具体例が不足しています。" },
+      "pointSummary": { "met": true, "note": "まとめがあります。" }
+    },
+    "improvementTips": "理由の後に具体例を増やすと説得力が上がります。"
+  }
 }
 
 厳守ルール:

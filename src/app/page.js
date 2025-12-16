@@ -1,7 +1,7 @@
 // app/page.js
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useChecker } from "../features/writing-checker/hooks/useChecker";
 import { Header } from "../features/writing-checker/components/Header";
 import { WritingInput } from "../features/writing-checker/components/WritingInput";
@@ -16,11 +16,21 @@ import {
 export default function Page() {
   const checker = useChecker();
   const [topic, setTopic] = useState(() => createDefaultTopicState());
+  const feedbackSectionRef = useRef(null);
 
   const mistakeHighlight = useMistakeHighlight(
     checker.studentText,
     checker.feedback?.mistakes
   );
+
+  useEffect(() => {
+    if (checker.feedback && feedbackSectionRef.current) {
+      feedbackSectionRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+  }, [checker.feedback]);
 
   const handleReset = () => {
     checker.reset();
@@ -53,11 +63,13 @@ export default function Page() {
 
               {checker.feedback && (
                 <>
-                  <FeedbackDisplay
-                    feedback={checker.feedback}
-                    studentText={checker.studentText}
-                    mistakeHighlight={mistakeHighlight}
-                  />
+                  <div ref={feedbackSectionRef}>
+                    <FeedbackDisplay
+                      feedback={checker.feedback}
+                      studentText={checker.studentText}
+                      mistakeHighlight={mistakeHighlight}
+                    />
+                  </div>
                   <MistakeList
                     mistakes={checker.feedback.mistakes}
                     studentText={checker.studentText}

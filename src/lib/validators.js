@@ -11,6 +11,34 @@ export function validateAndFixResponse(parsedFeedback) {
   if (!parsedFeedback.goodPoints) {
     parsedFeedback.goodPoints = [];
   }
+
+  const defaultPrepChecklist = {
+    point: { met: false, note: "" },
+    reason: { met: false, note: "" },
+    evidence: { met: false, note: "" },
+    pointSummary: { met: false, note: "" }
+  };
+
+  if (!parsedFeedback.topicFeedback || typeof parsedFeedback.topicFeedback !== "object") {
+    parsedFeedback.topicFeedback = {
+      onTopicSummary: "",
+      prepChecklist: { ...defaultPrepChecklist },
+      improvementTips: ""
+    };
+  } else {
+    parsedFeedback.topicFeedback.onTopicSummary = parsedFeedback.topicFeedback.onTopicSummary || "";
+    const checklist = parsedFeedback.topicFeedback.prepChecklist || {};
+    const normalizedChecklist = {};
+    for (const key of Object.keys(defaultPrepChecklist)) {
+      const entry = checklist[key] || {};
+      normalizedChecklist[key] = {
+        met: Boolean(entry.met),
+        note: entry.note || ""
+      };
+    }
+    parsedFeedback.topicFeedback.prepChecklist = normalizedChecklist;
+    parsedFeedback.topicFeedback.improvementTips = parsedFeedback.topicFeedback.improvementTips || "";
+  }
   
   // Ensure all mistakes have required fields
   parsedFeedback.mistakes = parsedFeedback.mistakes.map(mistake => ({

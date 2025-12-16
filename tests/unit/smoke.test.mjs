@@ -55,6 +55,15 @@ test("validateAndFixResponse normalizes mistakes and scores", () => {
   assert.equal(perfect.overallScore, 100, "Perfect submissions should normalize to full score");
 });
 
+test("validateAndFixResponse ensures topicFeedback defaults", () => {
+  const normalized = validateAndFixResponse({ mistakes: [] });
+  assert.ok(normalized.topicFeedback, "topicFeedback should exist");
+  assert.equal(typeof normalized.topicFeedback.onTopicSummary, "string");
+  assert.equal(typeof normalized.topicFeedback.improvementTips, "string");
+  assert.ok(normalized.topicFeedback.prepChecklist, "prepChecklist should exist");
+  assert.equal(typeof normalized.topicFeedback.prepChecklist.point.met, "boolean");
+});
+
 test("sanitizeInput strips HTML tags and scripts", () => {
   const unsafe = '<script>alert("x")</script><div>Hello <b>world</b>!</div>';
   const sanitized = sanitizeInput(unsafe);

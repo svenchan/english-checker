@@ -13,3 +13,10 @@ test("omits topic section when topic is null", () => {
   const prompt = buildCheckPrompt("Sample text.", null);
   assert.equal(prompt.includes("指定トピック"), false);
 });
+
+test("describes topicFeedback output requirements", () => {
+  const prompt = buildCheckPrompt("Sample text.", null);
+  assert.ok(prompt.includes("topicFeedback"), "topicFeedback instructions missing");
+  assert.ok(prompt.includes("prepChecklist"), "prepChecklist instructions missing");
+  assert.ok(prompt.includes("PREP"), "PREP guidance missing");
+});
