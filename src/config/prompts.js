@@ -17,61 +17,35 @@ export function buildCheckPrompt(text, topicText = null) {
 
   const topicSection = topicText
     ? `指定トピック: "${topicText}"
-- 学生はこの題材を意識して英文を書きました。テーマから外れていないかを必ず確認し、PREPの観点でコメントしてください。
+- テーマから逸れた箇所はPREPチェック内で必ず指摘すること。
 
 `
     : "";
   
   return `${topicSection}生徒の英文: "${limitedText}"
 
-出力仕様（JSONオブジェクトのみ、他の文字・コードフェンス不可）:
-- keys: mistakes(array), overallScore(number: 0-100), topicFeedback(object)
-- mistakes[].type は "grammar" | "vocabulary" | "spelling" のいずれか
-- ミスがなければ mistakes は [] にする
-- topicFeedback には以下のフィールドを含める:
-  {
-    "onTopicSummary": "テーマに沿って書けているか、外れている場合はどう直すかを1-2文で説明（テーマが無ければそれを明記）",
+出力仕様（JSONのみ、コードフェンス不可）:
+- フォーマット: {"mistakes":[...],"overallScore":0-100,"topicFeedback":{...}}
+- mistakes[].type ∈ {"grammar","vocabulary","spelling"}。誤りが無ければ []。
+- topicFeedback = {
+    "onTopicSummary": "テーマ適合を1-2文で要約（テーマが無ければ明記）",
     "prepChecklist": {
-      "point": { "met": true/false, "note": "P: 主張に対する評価や例" },
-      "reason": { "met": true/false, "note": "R: 理由の説明" },
-      "evidence": { "met": true/false, "note": "E: 具体例の有無" },
-      "pointSummary": { "met": true/false, "note": "P(まとめ): まとめの評価" }
+      "point": {...},
+      "reason": {...},
+      "evidence": {...},
+      "pointSummary": {...}
     },
-    "improvementTips": "PREPの観点で改善するための追加アドバイス。"
+    "improvementTips": "PREP視点の追加助言"
   }
-- PREP（Point→Reason→Evidence→Point）の流れに沿って、学生の回答がテーマに上手く答えているかを評価する
+- prepChecklist 各項目は { "met": true/false, "note": "短い補足" } 形式。
+- PREP（Point→Reason→Evidence→Point）順を守れているかを評価する
 
-出力例（値は例。必ず有効なJSONで返す）:
-{
-  "mistakes": [
-    {
-      "original": "I go to school yesterday.",
-      "corrected": "I went to school yesterday.",
-      "explanation": "過去の出来事なので動詞は過去形にします。",
-      "type": "grammar"
-    }
-  ],
-  "overallScore": 85,
-  "topicFeedback": {
-    "onTopicSummary": "テーマに沿っており、自己紹介が明確でした。",
-    "prepChecklist": {
-      "point": { "met": true, "note": "私はテニスが好きです。と主張できています。" },
-      "reason": { "met": true, "note": "好きな理由も述べています。" },
-      "evidence": { "met": false, "note": "具体例が不足しています。" },
-      "pointSummary": { "met": true, "note": "まとめがあります。" }
-    },
-    "improvementTips": "理由の後に具体例を増やすと説得力が上がります。"
-  }
-}
+出力例（要約形でOK、必ず有効なJSON）:
+{"mistakes":[{"original":"I go to school yesterday.","corrected":"I went to school yesterday.","explanation":"過去なので過去形。","type":"grammar"}],"overallScore":85,"topicFeedback":{"onTopicSummary":"テーマに沿って明確。","prepChecklist":{"point":{"met":true,"note":"主張あり"},"reason":{"met":true,"note":"理由提示"},"evidence":{"met":false,"note":"具体例不足"},"pointSummary":{"met":true,"note":"まとめあり"}},"improvementTips":"理由後に具体例を追加。"}}
 
-厳守ルール:
-1. 文法的に正しい英文は間違いとして出力しない
-2. 指摘は文法エラーと綴りミスのみ
-3. 内容の追加・変更、語彙の言い換え、より自然な表現提案は mistakes に含めない
-
-注意:
-- JSON以外の文字列やコードフェンスは出力しない
-- 値は日本語で構いませんが、キー名は必ず上記英語のまま
+必須ルール:
+- 文法的に正しい英文は誤りにしない。指摘は文法/綴りのみで語彙提案は除外。
+- JSON以外を出力しない。キー名は英語のまま、値は日本語で可。
 `;
 }
 
