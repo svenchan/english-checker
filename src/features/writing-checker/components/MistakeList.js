@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { CHECKER_MODES } from "@/config/testMode";
 import { Icons } from "@/shared/components/ui/Icons";
 import { Tooltip } from "@/shared/components/ui/Tooltip";
 import { getMistakeTypeLabel, getMistakeTypeColor, buildCopyText } from "@/lib/utils";
@@ -48,13 +49,29 @@ function renderCorrectedWithBold(original, corrected) {
   );
 }
 
-export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback }) {
+export function MistakeList({
+  mistakes,
+  studentText,
+  mistakeHighlight,
+  feedback,
+  mode = CHECKER_MODES.PRACTICE
+}) {
   const {
     selectedMistakeId,
     setSelectedMistakeId,
     mistakeRefs,
     getMistakeIdForIndex
   } = mistakeHighlight;
+  const isTestMode = mode === CHECKER_MODES.TEST;
+  const selectedCardClasses = isTestMode ? "border-red-500 bg-red-50" : "border-blue-500 bg-blue-50";
+  const hoverCardClasses = isTestMode ? "hover:border-red-300" : "hover:border-blue-300";
+  const topicFeedbackCardClasses = isTestMode
+    ? "mb-6 rounded-lg border border-red-200 bg-red-50 p-4"
+    : "mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4";
+  const topicFeedbackAccentText = isTestMode ? "text-red-900" : "text-blue-900";
+  const topicFeedbackIconColor = isTestMode ? "text-red-600" : "text-blue-600";
+  const improvementTipsAccent = isTestMode ? "text-red-700" : "text-blue-700";
+  const improvementTipsBorder = isTestMode ? "border-red-100" : "border-blue-100";
   const [copySuccess, setCopySuccess] = useState(false);
   const topicFeedback = feedback?.topicFeedback;
   const checklistEntries = [
@@ -89,10 +106,10 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback 
       </h3>
 
       {shouldShowTopicFeedback && (
-        <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className={topicFeedbackCardClasses}>
           <div className="flex items-center mb-3">
-            <Icons.BookOpen className="h-5 w-5 mr-2 text-blue-600" />
-            <h4 className="text-base font-semibold text-blue-900">テーマへの回答フィードバック</h4>
+            <Icons.BookOpen className={`h-5 w-5 mr-2 ${topicFeedbackIconColor}`} />
+            <h4 className={`text-base font-semibold ${topicFeedbackAccentText}`}>テーマへの回答フィードバック</h4>
           </div>
           {topicFeedback.onTopicSummary && (
             <p className="text-sm text-gray-800 mb-3 whitespace-pre-wrap break-words">
@@ -124,8 +141,8 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback 
             })}
           </div>
           {topicFeedback.improvementTips && (
-            <div className="mt-3 rounded-md bg-white p-3 border border-blue-100">
-              <p className="text-xs font-semibold text-blue-700 mb-1">改善のヒント</p>
+            <div className={`mt-3 rounded-md bg-white p-3 border ${improvementTipsBorder}`}>
+              <p className={`text-xs font-semibold mb-1 ${improvementTipsAccent}`}>改善のヒント</p>
               <p className="text-sm text-gray-800 whitespace-pre-wrap break-words">
                 {topicFeedback.improvementTips}
               </p>
@@ -148,7 +165,9 @@ export function MistakeList({ mistakes, studentText, mistakeHighlight, feedback 
                 }
               }}
               className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
-                selectedMistakeId === mistakeId ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-blue-300"
+                selectedMistakeId === mistakeId
+                  ? selectedCardClasses
+                  : `border-gray-200 ${hoverCardClasses}`
               }`}
               onClick={() => {
                 setSelectedMistakeId(mistakeId);

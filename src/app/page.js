@@ -136,7 +136,7 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex flex-col h-screen">
-        <Header />
+        <Header mode={mode} />
         <div className="flex flex-1">
           <ModeSidebar activeMode={mode} onModeChange={handleModeChange} />
           <div className="flex-1 overflow-y-auto p-6">
@@ -164,6 +164,7 @@ export default function Page() {
                       feedback={feedback}
                       studentText={studentText}
                       mistakeHighlight={mistakeHighlight}
+                      mode={mode}
                     />
                   </div>
                   <MistakeList
@@ -171,6 +172,7 @@ export default function Page() {
                     studentText={studentText}
                     mistakeHighlight={mistakeHighlight}
                     feedback={feedback}
+                    mode={mode}
                   />
                 </>
               )}

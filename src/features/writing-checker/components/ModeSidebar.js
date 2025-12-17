@@ -19,6 +19,17 @@ const MODE_CONFIG = [
   }
 ];
 
+const MODE_STYLES = {
+  [CHECKER_MODES.PRACTICE]: {
+    active: "border-blue-600 bg-blue-100 text-blue-700",
+    inactive: "border-gray-200 bg-white text-gray-500 hover:border-blue-300 hover:text-blue-600"
+  },
+  [CHECKER_MODES.TEST]: {
+    active: "border-red-600 bg-red-100 text-red-700",
+    inactive: "border-gray-200 bg-white text-gray-500 hover:border-red-300 hover:text-red-600"
+  }
+};
+
 export function ModeSidebar({ activeMode, onModeChange }) {
   return (
     <aside className="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-6 space-y-4">
@@ -40,9 +51,7 @@ export function ModeSidebar({ activeMode, onModeChange }) {
                 }
               }}
               className={`h-12 w-12 rounded-xl border-2 flex items-center justify-center transition-colors ${
-                isActive
-                  ? "border-blue-600 bg-blue-100 text-blue-700"
-                  : "border-gray-200 bg-white text-gray-500 hover:border-blue-300"
+                isActive ? MODE_STYLES[mode.id].active : MODE_STYLES[mode.id].inactive
               }`}
             >
               <Icon className="h-5 w-5" />

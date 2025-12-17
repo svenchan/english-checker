@@ -77,6 +77,12 @@ export function WritingInput({
   const submitDisabled = feedback
     ? isChecking || cooldown > 0
     : isChecking || !canSubmit || (isTestMode && !testSession);
+  const textareaFocusClasses = isTestMode
+    ? "focus:ring-red-500 focus:border-red-500"
+    : "focus:ring-blue-500 focus:border-blue-500";
+  const primaryButtonClasses = isTestMode
+    ? "bg-red-600 hover:bg-red-700"
+    : "bg-blue-600 hover:bg-blue-700";
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -102,24 +108,24 @@ export function WritingInput({
       </div>
 
       {isTestMode && (
-        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-xs uppercase tracking-wider text-blue-700">お題</p>
+              <p className="text-xs uppercase tracking-wider text-red-700">お題</p>
               <p className="mt-1 text-base font-semibold text-gray-900 whitespace-pre-wrap break-words">
                 {testSession?.topic || "トピックを読み込み中..."}
               </p>
             </div>
             <div
               className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
-                testSession?.submitted ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
+                testSession?.submitted ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
               }`}
             >
               <Icons.Clock className="h-4 w-4" />
               <span>{formattedTimer}</span>
             </div>
           </div>
-          <p className="mt-2 text-xs text-blue-700">
+          <p className="mt-2 text-xs text-red-700">
             {testSession?.submitted
               ? "提出済みです。「新しく書く」で次のテストに進めます。"
               : "5分以内に仕上げてください。時間になると自動で提出されます。"}
@@ -135,7 +141,7 @@ export function WritingInput({
         value={text}
         onChange={(e) => handleTextChange(e.target.value)}
         placeholder="例: I go to school yesterday. ここに英文を入力してください..."
-        className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+        className={`w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 ${textareaFocusClasses} resize-none`}
         disabled={isChecking || isDisabled}
       />
       {inputWarning && (
@@ -148,7 +154,7 @@ export function WritingInput({
         <button
           onClick={handlePrimaryClick}
           disabled={submitDisabled}
-          className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          className={`flex items-center space-x-2 px-6 py-3 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium ${primaryButtonClasses}`}
         >
           {isChecking ? (
             <>
