@@ -28,6 +28,7 @@ export function WritingInput({
 }) {
   const [cooldown, setCooldown] = useState(0);
   const [inputWarning, setInputWarning] = useState("");
+  const [topicRevealActive, setTopicRevealActive] = useState(false);
   const isTestMode = mode === CHECKER_MODES.TEST;
   const hasTestStarted = Boolean(testSession?.started);
   const wordCount = useMemo(() => countEffectiveWords(text), [text]);
@@ -43,6 +44,14 @@ export function WritingInput({
     }
     return () => clearInterval(interval);
   }, [cooldown]);
+
+  useEffect(() => {
+    if (hasTestStarted) {
+      const frame = requestAnimationFrame(() => setTopicRevealActive(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    setTopicRevealActive(false);
+  }, [hasTestStarted]);
 
   const handlePrimaryClick = () => {
     if (feedback) {
@@ -115,9 +124,19 @@ export function WritingInput({
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-wider text-red-700">お題</p>
-              <p className="mt-1 text-base font-semibold text-gray-900 whitespace-pre-wrap break-words">
-                {testSession?.topic || "トピックを読み込み中..."}
-              </p>
+              {hasTestStarted ? (
+                <p
+                  className={`mt-1 text-base font-semibold text-gray-900 whitespace-pre-wrap break-words transition-all duration-300 ease-out ${
+                    topicRevealActive ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
+                  }`}
+                >
+                  {testSession?.topic || "トピックを読み込み中..."}
+                </p>
+              ) : (
+                <p className="mt-1 text-base font-semibold text-gray-400 italic">
+                  「開始」を押すとお題が表示されます
+                </p>
+              )}
             </div>
             <div className="self-center flex flex-col items-stretch justify-center gap-2 min-w-[110px] max-w-[110px]">
               <div
@@ -151,7 +170,7 @@ export function WritingInput({
               ? "提出済みです。「新しく書く」で次のテストに進めます。"
               : hasTestStarted
                 ? "5分以内に仕上げてください。時間になると自動で提出されます。"
-                : "「タイマー開始」を押すと5分カウントが始まります。"}
+                : "「開始」を押すと5分カウントが始まり、お題が表示されます。"}
           </p>
         </div>
       )}
