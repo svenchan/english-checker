@@ -7,7 +7,7 @@ import { CHECKER_MODES, TEST_MODE } from "@/config/testMode";
 import { Icons } from "@/shared/components/ui/Icons";
 import { Tooltip } from "@/shared/components/ui/Tooltip";
 import { HighlightedText } from "./HighlightedText";
-import { countEffectiveWords } from "@/lib/wordCount";
+import { countEffectiveWords, countSentences } from "@/lib/wordCount";
 
 export function FeedbackDisplay({ feedback, studentText, mistakeHighlight, mode = CHECKER_MODES.PRACTICE }) {
   const { tokens, handleHighlightClick, selectedMistakeId } = mistakeHighlight;
@@ -31,27 +31,40 @@ export function FeedbackDisplay({ feedback, studentText, mistakeHighlight, mode 
   const [copySuccess, setCopySuccess] = useState(false);
   const isTestMode = mode === CHECKER_MODES.TEST;
   const wordCount = countEffectiveWords(studentText || "");
+  const sentenceCount = countSentences(studentText || "");
   const meetsWordTarget = wordCount >= 25;
   const wordBadgeClasses = meetsWordTarget
+    ? "bg-green-100 text-green-800 border-green-200"
+    : "bg-red-100 text-red-800 border-red-200";
+  const meetsSentenceTarget = sentenceCount >= 3;
+  const sentenceBadgeClasses = meetsSentenceTarget
     ? "bg-green-100 text-green-800 border-green-200"
     : "bg-red-100 text-red-800 border-red-200";
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center space-x-4 mb-6">
+      <div className="flex flex-wrap items-center gap-4 mb-6">
         <div className={`px-6 py-3 rounded-lg text-2xl font-bold ${scoreColor}`}>
           {scoreDisplay}
         </div>
-        <div>
+        <div className="min-w-[200px]">
           <p className="text-sm text-gray-600">{summaryText}</p>
         </div>
         {isTestMode && (
-          <span
-            className={`text-sm font-semibold px-3 py-1 rounded-full border ${wordBadgeClasses}`}
-            title="テストモードでは25語以上を目指しましょう"
-          >
-            {wordCount}語
-          </span>
+          <div className="flex items-center gap-2 ml-auto">
+            <span
+              className={`text-sm font-semibold px-3 py-1 rounded-full border ${wordBadgeClasses}`}
+              title="テストモードでは25語以上を目指しましょう"
+            >
+              {wordCount}語
+            </span>
+            <span
+              className={`text-sm font-semibold px-3 py-1 rounded-full border ${sentenceBadgeClasses}`}
+              title="テストモードでは3文以上を目指しましょう"
+            >
+              {sentenceCount}文
+            </span>
+          </div>
         )}
       </div>
 

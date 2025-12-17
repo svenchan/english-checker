@@ -45,3 +45,14 @@ export function countEffectiveWords(input = "") {
 
   return filtered.length;
 }
+
+export function countSentences(input = "") {
+  if (!input || typeof input !== "string") {
+    return 0;
+  }
+
+  return input
+    .split(/[.!?]+/g)
+    .map((part) => part.trim())
+    .filter(Boolean).length;
+}
