@@ -20,3 +20,9 @@ test("describes topicFeedback output requirements", () => {
   assert.ok(prompt.includes("prepChecklist"), "prepChecklist instructions missing");
   assert.ok(prompt.includes("PREP"), "PREP guidance missing");
 });
+
+test("omits PREP instructions when includePrepFeedback is false", () => {
+  const prompt = buildCheckPrompt("Sample text.", "My hobby", { includePrepFeedback: false });
+  assert.ok(prompt.includes("topicFeedback = null"), "Prompt should explicitly disable topicFeedback");
+  assert.equal(prompt.includes("prepChecklist"), false, "Prompt should omit PREP checklist instructions");
+});

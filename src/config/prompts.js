@@ -6,7 +6,8 @@ export const SYSTEM_MESSAGE = "日本の中学生向け英作文チェッカー�
 
 // CHANGED: Balanced prompt - educational but not too verbose
 // Emphasizes clear explanations with grammar rules
-export function buildCheckPrompt(text, topicText = null) {
+export function buildCheckPrompt(text, topicText = null, options = {}) {
+  const { includePrepFeedback = true } = options;
   // NEW: Limit input to 500 characters to prevent huge prompts
   const limitedText = text.slice(0, 500);
   
@@ -17,17 +18,12 @@ export function buildCheckPrompt(text, topicText = null) {
 
   const topicSection = topicText
     ? `指定トピック: "${topicText}"
-- テーマから逸れた箇所はPREPチェック内で必ず指摘すること。
-
+${includePrepFeedback ? "- テーマから逸れた箇所はPREPチェック内で必ず指摘すること。\n" : "- テーマから逸れた箇所は一言で指摘する（PREP分析は不要）。\n"}
 `
     : "";
-  
-  return `${topicSection}生徒の英文: "${limitedText}"
 
-出力仕様（JSONのみ、コードフェンス不可）:
-- フォーマット: {"mistakes":[...],"overallScore":0-100,"topicFeedback":{...}}
-- mistakes[].type ∈ {"grammar","vocabulary","spelling"}。誤りが無ければ []。
-- topicFeedback = {
+  const topicFeedbackSpec = includePrepFeedback
+    ? `- topicFeedback = {
     "onTopicSummary": "テーマ適合を1-2文で要約（テーマが無ければ明記）",
     "prepChecklist": {
       "point": {...},
@@ -38,10 +34,22 @@ export function buildCheckPrompt(text, topicText = null) {
     "improvementTips": "PREP視点の追加助言"
   }
 - prepChecklist 各項目は { "met": true/false, "note": "短い補足" } 形式。
-- PREP（Point→Reason→Evidence→Point）順を守れているかを評価する
+- PREP（Point→Reason→Evidence→Point）順を守れているかを評価する`
+    : `- topicFeedback = null（PREP分析は不要）。文法/綴りの指摘に集中する`;
+
+  const exampleOutput = includePrepFeedback
+    ? `{"mistakes":[{"original":"I go to school yesterday.","corrected":"I went to school yesterday.","explanation":"過去なので過去形。","type":"grammar"}],"overallScore":85,"topicFeedback":{"onTopicSummary":"テーマに沿って明確。","prepChecklist":{"point":{"met":true,"note":"主張あり"},"reason":{"met":true,"note":"理由提示"},"evidence":{"met":false,"note":"具体例不足"},"pointSummary":{"met":true,"note":"まとめあり"}},"improvementTips":"理由後に具体例を追加。"}}`
+    : `{"mistakes":[{"original":"I go to school yesterday.","corrected":"I went to school yesterday.","explanation":"過去なので過去形。","type":"grammar"}],"overallScore":85,"topicFeedback":null}`;
+  
+  return `${topicSection}生徒の英文: "${limitedText}"
+
+出力仕様（JSONのみ、コードフェンス不可）:
+- フォーマット: {"mistakes":[...],"overallScore":0-100,"topicFeedback":{...}}
+- mistakes[].type ∈ {"grammar","vocabulary","spelling"}。誤りが無ければ []。
+${topicFeedbackSpec}
 
 出力例（要約形でOK、必ず有効なJSON）:
-{"mistakes":[{"original":"I go to school yesterday.","corrected":"I went to school yesterday.","explanation":"過去なので過去形。","type":"grammar"}],"overallScore":85,"topicFeedback":{"onTopicSummary":"テーマに沿って明確。","prepChecklist":{"point":{"met":true,"note":"主張あり"},"reason":{"met":true,"note":"理由提示"},"evidence":{"met":false,"note":"具体例不足"},"pointSummary":{"met":true,"note":"まとめあり"}},"improvementTips":"理由後に具体例を追加。"}}
+${exampleOutput}
 
 必須ルール:
 - 文法的に正しい英文は誤りにしない。指摘は文法/綴りのみで語彙提案は除外。

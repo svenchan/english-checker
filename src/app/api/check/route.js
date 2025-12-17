@@ -9,7 +9,7 @@ import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
 import { sanitizeInput } from "@/lib/sanitize";
 import { normalizeTopicText } from "@/lib/normalizeTopicText";
 import { CHECKER_MODES, TEST_MODE, buildTooShortFeedback } from "@/config/testMode";
-import { countEffectiveWords } from "@/lib/wordCount";
+import { countEffectiveWords, countSentences } from "@/lib/wordCount";
 
 const CLASS11_API_KEY = process.env.GROQ_API_KEY_11;
 const PROMPT_VERSION = "v2_topic";
@@ -101,10 +101,14 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
       }
 
-      const prompt = buildCheckPrompt(text, topicText);
       const owner = resolveOwnerContext(body, sessionInfo.sessionId);
       const promptVersion = isTestMode ? TEST_MODE.promptVersion : PROMPT_VERSION;
       const wordCount = countEffectiveWords(text);
+      const sentenceCount = countSentences(text);
+      const hasTopicContext = Boolean(topicText);
+      const meetsPrepThreshold = wordCount >= 25 && sentenceCount >= 3;
+      const shouldApplyPrepRule = isTestMode || hasTopicContext;
+      const shouldIncludePrepFeedback = shouldApplyPrepRule && meetsPrepThreshold;
 
       const schoolId = sanitizeOrNull(body?.schoolId) || DEFAULT_SCHOOL_ID;
       const { data: submission, error: submissionError } = await supabaseAdmin
@@ -139,6 +143,11 @@ export async function POST(req) {
           { status: HTTP_STATUS.OK }
         );
       }
+
+      const prompt = buildCheckPrompt(text, topicText, {
+        includePrepFeedback: shouldIncludePrepFeedback
+      });
+
 
       try {
         const apiKey = CLASS11_API_KEY;
@@ -217,7 +226,7 @@ export async function POST(req) {
           }
         }
         parsedFeedback = validateAndFixResponse(parsedFeedback, {
-          expectTopicFeedback: Boolean(topicText)
+          expectTopicFeedback: shouldIncludePrepFeedback
         });
         parsedFeedback.mode = requestedMode;
         parsedFeedback.status = "ok";
