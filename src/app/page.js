@@ -32,6 +32,7 @@ export default function Page() {
 
   const mistakeHighlight = useMistakeHighlight(studentText, feedback?.mistakes);
   const isTestLocked = mode === CHECKER_MODES.TEST && testSession && !testSession.submitted;
+  const shouldShowMistakeList = (feedback?.mistakes?.length || 0) > 0;
 
   const previousModeRef = useRef(mode);
   useEffect(() => {
@@ -165,15 +166,18 @@ export default function Page() {
                       studentText={studentText}
                       mistakeHighlight={mistakeHighlight}
                       mode={mode}
+                      showCopyButton={!shouldShowMistakeList}
                     />
                   </div>
-                  <MistakeList
-                    mistakes={feedback.mistakes}
-                    studentText={studentText}
-                    mistakeHighlight={mistakeHighlight}
-                    feedback={feedback}
-                    mode={mode}
-                  />
+                  {shouldShowMistakeList && (
+                    <MistakeList
+                      mistakes={feedback.mistakes}
+                      studentText={studentText}
+                      mistakeHighlight={mistakeHighlight}
+                      feedback={feedback}
+                      mode={mode}
+                    />
+                  )}
                 </>
               )}
             </div>
