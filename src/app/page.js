@@ -27,7 +27,13 @@ export default function Page() {
   } = useChecker();
   const [topic, setTopic] = useState(() => createDefaultTopicState());
   const [mode, setMode] = useState(CHECKER_MODES.PRACTICE);
-  const { session: testSession, remainingMs, startNewSession, markSubmitted } = useTestSession(mode);
+  const {
+    session: testSession,
+    remainingMs,
+    startNewSession,
+    startTimer,
+    markSubmitted
+  } = useTestSession(mode);
   const feedbackSectionRef = useRef(null);
 
   const mistakeHighlight = useMistakeHighlight(studentText, feedback?.mistakes);
@@ -86,7 +92,12 @@ export default function Page() {
 
   const handleTestSubmit = useCallback(
     async (trigger = "manual") => {
-      if (mode !== CHECKER_MODES.TEST || !testSession || testSession.submitted) {
+      if (
+        mode !== CHECKER_MODES.TEST ||
+        !testSession ||
+        !testSession.started ||
+        testSession.submitted
+      ) {
         return;
       }
 
@@ -147,6 +158,7 @@ export default function Page() {
                 testSession={mode === CHECKER_MODES.TEST ? testSession : null}
                 remainingMs={mode === CHECKER_MODES.TEST ? remainingMs : TEST_MODE.durationMs}
                 onTestSessionRestart={handleTestSessionRestart}
+                onTestTimerStart={startTimer}
                 text={studentText}
                 onChange={setStudentText}
                 onCheck={handleCheck}

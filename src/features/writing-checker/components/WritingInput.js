@@ -15,6 +15,7 @@ export function WritingInput({
   testSession = null,
   remainingMs = TEST_MODE.durationMs,
   onTestSessionRestart,
+  onTestTimerStart,
   text,
   onChange,
   onCheck,
@@ -28,8 +29,10 @@ export function WritingInput({
   const [cooldown, setCooldown] = useState(0);
   const [inputWarning, setInputWarning] = useState("");
   const isTestMode = mode === CHECKER_MODES.TEST;
+  const hasTestStarted = Boolean(testSession?.started);
   const wordCount = useMemo(() => countEffectiveWords(text), [text]);
   const formattedTimer = useMemo(() => formatTimer(remainingMs), [remainingMs]);
+  const timerButtonDisabled = isChecking || isDisabled || hasTestStarted || !testSession;
 
   useEffect(() => {
     let interval;
@@ -73,10 +76,10 @@ export function WritingInput({
     onChange(finalText);
   };
 
-  const canSubmit = isTestMode || text.trim().length > 0;
+  const canSubmit = isTestMode ? Boolean(testSession?.started) : text.trim().length > 0;
   const submitDisabled = feedback
     ? isChecking || cooldown > 0
-    : isChecking || !canSubmit || (isTestMode && !testSession);
+    : isChecking || !canSubmit || (isTestMode && (!testSession || !testSession.started));
   const textareaFocusClasses = isTestMode
     ? "focus:ring-red-500 focus:border-red-500"
     : "focus:ring-blue-500 focus:border-blue-500";
@@ -116,19 +119,39 @@ export function WritingInput({
                 {testSession?.topic || "トピックを読み込み中..."}
               </p>
             </div>
-            <div
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
-                testSession?.submitted ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-              }`}
-            >
-              <Icons.Clock className="h-4 w-4" />
-              <span>{formattedTimer}</span>
+            <div className="self-center flex flex-col items-stretch justify-center gap-2 min-w-[110px] max-w-[110px]">
+              <div
+                className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
+                  testSession?.submitted
+                    ? "bg-green-100 text-green-700"
+                    : hasTestStarted
+                      ? "bg-red-100 text-red-700"
+                      : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                <Icons.Clock className="h-4 w-4" />
+                <span>{formattedTimer}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => onTestTimerStart?.()}
+                disabled={timerButtonDisabled}
+                className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                  timerButtonDisabled
+                    ? "border-gray-200 text-gray-400 cursor-not-allowed bg-white"
+                    : "border-red-200 text-red-700 hover:bg-red-100 bg-white"
+                }`}
+              >
+                開始
+              </button>
             </div>
           </div>
           <p className="mt-2 text-xs text-red-700">
             {testSession?.submitted
               ? "提出済みです。「新しく書く」で次のテストに進めます。"
-              : "5分以内に仕上げてください。時間になると自動で提出されます。"}
+              : hasTestStarted
+                ? "5分以内に仕上げてください。時間になると自動で提出されます。"
+                : "「タイマー開始」を押すと5分カウントが始まります。"}
           </p>
         </div>
       )}

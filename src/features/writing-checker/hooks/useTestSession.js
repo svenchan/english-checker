@@ -38,11 +38,16 @@ function removeStoredSession() {
 export function useTestSession(mode) {
   const [session, setSession] = useState(null);
   const [remainingMs, setRemainingMs] = useState(TEST_MODE.durationMs);
+  const [isTimerActive, setIsTimerActive] = useState(false);
 
   const shouldEnable = mode === CHECKER_MODES.TEST;
 
   const refreshRemaining = useCallback((targetSession) => {
     if (!targetSession) {
+      setRemainingMs(TEST_MODE.durationMs);
+      return;
+    }
+    if (!targetSession?.started || !targetSession.endsAt) {
       setRemainingMs(TEST_MODE.durationMs);
       return;
     }
@@ -57,12 +62,18 @@ export function useTestSession(mode) {
     const existing = readStoredSession();
     if (existing && !existing.submitted) {
       setSession(existing);
-      refreshRemaining(existing);
+      setIsTimerActive(Boolean(existing.started && existing.endsAt));
+      if (existing.started && existing.endsAt) {
+        refreshRemaining(existing);
+      } else {
+        setRemainingMs(TEST_MODE.durationMs);
+      }
       return;
     }
     const next = createTestSession();
     setSession(next);
-    refreshRemaining(next);
+    setIsTimerActive(false);
+    setRemainingMs(TEST_MODE.durationMs);
     persistSession(next);
   }, [refreshRemaining, shouldEnable]);
 
@@ -73,20 +84,39 @@ export function useTestSession(mode) {
   }, [hydrateSession, shouldEnable]);
 
   useEffect(() => {
-    if (!session || session.submitted) {
+    if (!session || session.submitted || !session.started || !session.endsAt) {
       return;
     }
     refreshRemaining(session);
     const interval = setInterval(() => refreshRemaining(session), 1000);
     return () => clearInterval(interval);
-  }, [session?.id, session?.submitted, session?.endsAt, refreshRemaining]);
+  }, [session?.id, session?.submitted, session?.endsAt, session?.started, refreshRemaining]);
 
   const startNewSession = useCallback(() => {
     const next = createTestSession();
     setSession(next);
-    refreshRemaining(next);
+    setIsTimerActive(Boolean(next.started && next.endsAt));
+    if (next.started && next.endsAt) {
+      refreshRemaining(next);
+    } else {
+      setRemainingMs(TEST_MODE.durationMs);
+    }
     persistSession(next);
     return next;
+  }, [refreshRemaining]);
+
+  const startTimer = useCallback(() => {
+    setSession((current) => {
+      if (!current) return current;
+      if (current.started && current.endsAt) return current;
+      const now = Date.now();
+      const endsAt = now + TEST_MODE.durationMs;
+      const next = { ...current, started: true, endsAt };
+      setIsTimerActive(true);
+      persistSession(next);
+      refreshRemaining(next);
+      return next;
+    });
   }, [refreshRemaining]);
 
   const markSubmitted = useCallback(() => {
@@ -95,7 +125,9 @@ export function useTestSession(mode) {
       if (current.submitted) return current;
       const next = { ...current, submitted: true };
       persistSession(next);
-      setRemainingMs((prev) => Math.min(prev, Math.max(0, next.endsAt - Date.now())));
+      if (next.endsAt) {
+        setRemainingMs((prev) => Math.min(prev, Math.max(0, next.endsAt - Date.now())));
+      }
       return next;
     });
   }, []);
@@ -104,14 +136,17 @@ export function useTestSession(mode) {
     setSession(null);
     removeStoredSession();
     setRemainingMs(TEST_MODE.durationMs);
+    setIsTimerActive(false);
   }, []);
 
   return {
     session,
     remainingMs,
+    isTimerActive,
     shouldEnable,
     hydrateSession,
     startNewSession,
+    startTimer,
     markSubmitted,
     clearSession
   };
