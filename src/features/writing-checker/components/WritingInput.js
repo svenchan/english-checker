@@ -29,6 +29,7 @@ export function WritingInput({
   const [cooldown, setCooldown] = useState(0);
   const [inputWarning, setInputWarning] = useState("");
   const [topicRevealActive, setTopicRevealActive] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const isTestMode = mode === CHECKER_MODES.TEST;
   const hasTestStarted = Boolean(testSession?.started);
   const wordCount = useMemo(() => countEffectiveWords(text), [text]);
@@ -63,6 +64,9 @@ export function WritingInput({
       return;
     }
 
+    if (!isTestMode) {
+      setShowHint(false);
+    }
     onCheck();
     setCooldown(COOLDOWN_SECONDS);
   };
@@ -192,7 +196,43 @@ export function WritingInput({
         </p>
       )}
 
-      <div className="mt-4 flex justify-end space-x-3">
+      <div className="mt-4 flex items-center justify-between">
+        {!isTestMode && (
+          <div className="relative inline-block">
+            <button
+              type="button"
+              onClick={() => setShowHint((prev) => !prev)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+              aria-pressed={showHint}
+              aria-label="英作文のヒントを表示"
+            >
+              <Icons.Info className="h-5 w-5" />
+              <span className="sr-only">ヒントを見る</span>
+            </button>
+            {showHint && (
+              <div className="absolute left-full top-full ml-3 mt-3 w-[320px] max-w-[min(320px,calc(100vw-4rem))] rounded-lg border border-blue-200 bg-white p-4 text-sm shadow-lg z-20">
+                <p className="font-semibold text-gray-900">英作文のヒント：構成を意識しよう</p>
+                <p className="mt-2 text-gray-800">
+                  よい英作文は、文法が正しいだけでなく、文と文がつながっていることが大切です。文の流れを意識すると、読みやすくなります。
+                </p>
+                <p className="mt-2 text-gray-800">そのときに役立つのが PREP です。</p>
+                <p className="mt-2 text-gray-800">
+                  P（主張）：何について書くかをはっきり言う
+                  <br />
+                  R（理由）：なぜそう思うかを書く
+                  <br />
+                  E（具体例）：例や自分の経験を書く
+                  <br />
+                  P（まとめ）：もう一度主張をまとめる
+                </p>
+                <p className="mt-2 text-gray-800">
+                  いつも使う必要はありませんが、考えを分かりやすく伝えたいときにとても便利です。
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           onClick={handlePrimaryClick}
           disabled={submitDisabled}
