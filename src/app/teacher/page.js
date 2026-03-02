@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { supabaseAdmin } from "@/config/supabase";
+import { supabaseAdmin, isSupabaseEnabled } from "@/config/supabase";
 import { CHECKER_MODES } from "@/config/testMode";
 
 export const dynamic = "force-dynamic";
@@ -11,28 +11,33 @@ const FILTERS = [
 ];
 
 async function fetchSubmissions(filter) {
-  if (!supabaseAdmin) {
-    return [];
+  if (!isSupabaseEnabled() || !supabaseAdmin) {
+    return { submissions: [], loadError: false, disabled: !isSupabaseEnabled() };
   }
 
-  let query = supabaseAdmin
-    .from("writing_submissions")
-    .select("id, created_at, topic_text, status, student_text, test_mode")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  try {
+    let query = supabaseAdmin
+      .from("writing_submissions")
+      .select("id, created_at, topic_text, status, student_text, test_mode")
+      .order("created_at", { ascending: false })
+      .limit(50);
 
-  if (filter === CHECKER_MODES.TEST) {
-    query = query.eq("test_mode", true);
-  } else if (filter === CHECKER_MODES.PRACTICE) {
-    query = query.eq("test_mode", false);
-  }
+    if (filter === CHECKER_MODES.TEST) {
+      query = query.eq("test_mode", true);
+    } else if (filter === CHECKER_MODES.PRACTICE) {
+      query = query.eq("test_mode", false);
+    }
 
-  const { data, error } = await query;
-  if (error) {
-    console.error("Failed to load submissions", error);
-    return [];
+    const { data, error } = await query;
+    if (error) {
+      console.error("Failed to load submissions", error);
+      return { submissions: [], loadError: true };
+    }
+    return { submissions: data || [], loadError: false, disabled: false };
+  } catch (err) {
+    console.error("Failed to load submissions", err);
+    return { submissions: [], loadError: true, disabled: false };
   }
-  return data || [];
 }
 
 function formatDate(value) {
@@ -48,7 +53,7 @@ function formatDate(value) {
 
 export default async function TeacherPage({ searchParams }) {
   const filter = searchParams?.mode || "all";
-  const submissions = await fetchSubmissions(filter);
+  const { submissions, loadError, disabled } = await fetchSubmissions(filter);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,7 +92,13 @@ export default async function TeacherPage({ searchParams }) {
             <span className="col-span-2">内容サマリー</span>
           </div>
           {submissions.length === 0 ? (
-            <p className="p-6 text-sm text-gray-500">提出がまだありません。</p>
+            <p className="p-6 text-sm text-gray-500">
+              {disabled
+                ? "提出履歴は一時利用できません。メンテナンス中です。"
+                : loadError
+                  ? "提出履歴を読み込めません。"
+                  : "提出がまだありません。"}
+            </p>
           ) : (
             <ul className="divide-y divide-gray-100">
               {submissions.map((submission) => (

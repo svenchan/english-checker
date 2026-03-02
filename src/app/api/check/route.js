@@ -4,7 +4,7 @@ import { enqueue } from "./queue";
 import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "@/config/prompts";
 import { ERRORS, HTTP_STATUS } from "@/config/errors";
 import { validateAndFixResponse } from "@/lib/validators";
-import { supabaseAdmin } from "@/config/supabase";
+import { supabaseAdmin, isSupabaseEnabled } from "@/config/supabase";
 import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
 import { sanitizeInput } from "@/lib/sanitize";
 import { normalizeTopicText } from "@/lib/normalizeTopicText";
@@ -96,8 +96,8 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.TEXT_TOO_LONG }, { status: HTTP_STATUS.BAD_REQUEST });
       }
 
-      if (!CLASS11_API_KEY || !supabaseAdmin) {
-        console.error("Missing required server configuration");
+      if (!CLASS11_API_KEY) {
+        console.error("Missing required server configuration (Groq API key)");
         return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
       }
 
@@ -128,8 +128,10 @@ export async function POST(req) {
         .single();
 
       if (submissionError || !submission) {
-        console.error("Failed to insert writing_submissions:", submissionError);
-        return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
+        if (isSupabaseEnabled()) {
+          console.error("Failed to insert writing_submissions:", submissionError);
+          return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
+        }
       }
 
       if (isTestMode && wordCount < TEST_MODE.minWords) {
@@ -137,7 +139,7 @@ export async function POST(req) {
         await updateSubmissionStatus(submission.id, "too_short");
         return NextResponse.json(
           {
-            submissionId: submission.id,
+            submissionId: isSupabaseEnabled() ? submission.id : null,
             feedback: tooShortFeedback
           },
           { status: HTTP_STATUS.OK }
@@ -264,7 +266,7 @@ export async function POST(req) {
 
         return NextResponse.json(
           {
-            submissionId: submission.id,
+            submissionId: isSupabaseEnabled() ? submission.id : null,
             feedback: aiResult.feedback
           },
           { status: HTTP_STATUS.OK }
