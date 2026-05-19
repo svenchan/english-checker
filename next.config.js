@@ -21,14 +21,17 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+	productionBrowserSourceMaps: true,
 	async headers() {
-		return [
-			{
-				source: "/(.*)",
-				headers: securityHeaders
-			}
-		];
+	  return [
+		{
+		  source: "/(.*)",
+		  headers: securityHeaders
+		}
+	  ];
 	}
-};
+  };
+
+
 
 export default nextConfig;
