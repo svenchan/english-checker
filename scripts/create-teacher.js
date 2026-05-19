@@ -1,10 +1,15 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import bcrypt from "bcrypt";
 import postgres from "postgres";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
+
+// Set before running once locally, then remove the plaintext password from this file.
+const USERNAME = "teacher";
+const PASSWORD = "";
 
 function loadEnvLocal() {
   try {
@@ -36,22 +41,22 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const migrationPaths = [
-  "supabase/migrations/20260219_simplified_checks.sql",
-  "supabase/migrations/20260519_teacher_auth.sql",
-  "supabase/migrations/20260519_teacher_auth_rebuild.sql"
-].map((rel) => resolve(root, rel));
+if (!USERNAME || !PASSWORD) {
+  console.error("Set USERNAME and PASSWORD in this script before running.");
+  process.exit(1);
+}
 
+const passwordHash = await bcrypt.hash(PASSWORD, 12);
 const sql = postgres(databaseUrl, { max: 1 });
 
 try {
-  for (const migrationPath of migrationPaths) {
-    const ddl = readFileSync(migrationPath, "utf8");
-    await sql.unsafe(ddl);
-    console.log("Schema applied:", migrationPath);
-  }
+  await sql`
+    insert into teachers (username, password_hash)
+    values (${USERNAME}, ${passwordHash})
+  `;
+  console.log("done");
 } catch (error) {
-  console.error("Migration failed:", error.message);
+  console.error(error.message);
   process.exit(1);
 } finally {
   await sql.end();

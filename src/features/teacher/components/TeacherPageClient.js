@@ -55,12 +55,22 @@ export function TeacherPageClient({
                 <h2 className="text-lg font-bold text-gray-900">提出履歴</h2>
                 <p className="text-xs text-gray-500 mt-0.5">直近20件</p>
               </div>
-              <Link
-                href="/"
-                className="text-xs font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
-              >
-                チェッカーへ
-              </Link>
+              <div className="flex flex-col items-end gap-1">
+                <Link
+                  href="/"
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                >
+                  チェッカーへ
+                </Link>
+                <form action="/api/auth/logout" method="post">
+                  <button
+                    type="submit"
+                    className="text-xs font-medium text-gray-600 hover:text-gray-900 whitespace-nowrap"
+                  >
+                    Log out
+                  </button>
+                </form>
+              </div>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {FILTERS.map((option) => {
