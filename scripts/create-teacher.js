@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import bcryptjs from "bcryptjs";
+import bcrypt from "bcryptjs";
 import postgres from "postgres";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
