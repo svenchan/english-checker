@@ -4,7 +4,7 @@ import { enqueue } from "./queue";
 import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "@/config/prompts";
 import { ERRORS, HTTP_STATUS } from "@/config/errors";
 import { validateAndFixResponse } from "@/lib/validators";
-import { supabaseAdmin, isSupabaseEnabled } from "@/config/supabase";
+import sql from "@/lib/db";
 import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
 import { sanitizeInput } from "@/lib/sanitize";
 import { normalizeTopicText } from "@/lib/normalizeTopicText";
@@ -47,9 +47,13 @@ function attachGuestCookie(response, sessionInfo) {
 }
 
 async function updateSubmissionStatus(submissionId, status) {
-  if (!supabaseAdmin || !submissionId) return;
+  if (!submissionId) return;
   try {
-    await supabaseAdmin.from("writing_submissions").update({ status }).eq("id", submissionId);
+    await sql`
+      update writing_submissions
+      set status = ${status}
+      where id = ${submissionId}
+    `;
   } catch (statusError) {
     console.error("Failed to update submission status:", statusError);
   }
@@ -111,35 +115,45 @@ export async function POST(req) {
       const shouldIncludePrepFeedback = shouldApplyPrepRule && meetsPrepThreshold;
 
       const schoolId = sanitizeOrNull(body?.schoolId) || DEFAULT_SCHOOL_ID;
-      const { data: submission, error: submissionError } = await supabaseAdmin
-        .from("writing_submissions")
-        .insert({
-          owner_type: owner.ownerType,
-          student_id: owner.studentId,
-          guest_session_id: owner.guestSessionId,
-          school_id: schoolId,
-          class_id: sanitizeOrNull(body?.classId),
-          topic_text: topicText,
-          student_text: text,
-          prompt_version: promptVersion,
-          test_mode: isTestMode
-        })
-        .select()
-        .single();
-
-      if (submissionError || !submission) {
-        if (isSupabaseEnabled()) {
-          console.error("Failed to insert writing_submissions:", submissionError);
-          return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
+      let submission = null;
+      try {
+        const rows = await sql`
+          insert into writing_submissions (
+            owner_type,
+            student_id,
+            guest_session_id,
+            school_id,
+            class_id,
+            topic_text,
+            student_text,
+            prompt_version,
+            test_mode
+          ) values (
+            ${owner.ownerType},
+            ${owner.studentId},
+            ${owner.guestSessionId},
+            ${schoolId},
+            null,
+            ${topicText},
+            ${text},
+            ${promptVersion},
+            ${isTestMode}
+          )
+          returning id
+        `;
+        if (rows[0]?.id) {
+          submission = { id: rows[0].id };
         }
+      } catch (submissionError) {
+        console.error("Failed to insert writing_submissions:", submissionError);
       }
 
       if (isTestMode && wordCount < TEST_MODE.minWords) {
         const tooShortFeedback = buildTooShortFeedback(topicText);
-        await updateSubmissionStatus(submission.id, "too_short");
+        await updateSubmissionStatus(submission?.id, "too_short");
         return NextResponse.json(
           {
-            submissionId: isSupabaseEnabled() ? submission.id : null,
+            submissionId: submission?.id ?? null,
             feedback: tooShortFeedback
           },
           { status: HTTP_STATUS.OK }
@@ -190,7 +204,7 @@ export async function POST(req) {
             groqResponse = await callGroq({ useJsonResponseFormat: false });
             retries += 1;
           } else {
-            await updateSubmissionStatus(submission.id, "error");
+            await updateSubmissionStatus(submission?.id, "error");
             if (groqResponse.status === 429) {
               return NextResponse.json({ error: ERRORS.RATE_LIMIT_EXCEEDED }, { status: HTTP_STATUS.RATE_LIMIT });
             }
@@ -200,7 +214,7 @@ export async function POST(req) {
 
         if (!groqResponse.ok) {
           const errorData = await groqResponse.json().catch(() => ({}));
-          await updateSubmissionStatus(submission.id, "error");
+          await updateSubmissionStatus(submission?.id, "error");
           if (groqResponse.status === 429) {
             return NextResponse.json({ error: ERRORS.RATE_LIMIT_EXCEEDED }, { status: HTTP_STATUS.RATE_LIMIT });
           }
@@ -246,33 +260,43 @@ export async function POST(req) {
           aiResult.feedback.topicText = topicText || null;
         }
 
-        const { error: feedbackError } = await supabaseAdmin.from("ai_feedback").insert({
-          submission_id: submission.id,
-          feedback_json: aiResult.feedback,
-          model: aiResult.model,
-          tokens_in: aiResult.tokensIn,
-          tokens_out: aiResult.tokensOut,
-          latency_ms: aiResult.latency,
-          retries: aiResult.retries ?? 0
-        });
-
-        if (feedbackError) {
-          console.error("Failed to insert ai_feedback:", feedbackError);
-          await updateSubmissionStatus(submission.id, "error");
-          return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
+        if (submission?.id) {
+          try {
+            await sql`
+              insert into ai_feedback (
+                submission_id,
+                feedback_json,
+                model,
+                tokens_in,
+                tokens_out,
+                latency_ms,
+                retries
+              ) values (
+                ${submission.id},
+                ${sql.json(aiResult.feedback)},
+                ${aiResult.model},
+                ${aiResult.tokensIn},
+                ${aiResult.tokensOut},
+                ${aiResult.latency},
+                ${aiResult.retries ?? 0}
+              )
+            `;
+            await updateSubmissionStatus(submission.id, "ok");
+          } catch (feedbackError) {
+            console.error("Failed to insert ai_feedback:", feedbackError);
+            await updateSubmissionStatus(submission.id, "error");
+          }
         }
-
-        await updateSubmissionStatus(submission.id, "ok");
 
         return NextResponse.json(
           {
-            submissionId: isSupabaseEnabled() ? submission.id : null,
+            submissionId: submission?.id ?? null,
             feedback: aiResult.feedback
           },
           { status: HTTP_STATUS.OK }
         );
       } catch (error) {
-        await updateSubmissionStatus(submission.id, "error");
+        await updateSubmissionStatus(submission?.id, "error");
         throw error;
       }
     });

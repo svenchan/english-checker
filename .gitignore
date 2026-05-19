@@ -1,6 +1,3 @@
 node_modules
 .next
 .env.local
-
-
-DATABASE_URL=postgresql://neondb_owner:npg_eNnzsrQj37dZ@ep-late-darkness-aoz0xo0w-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
