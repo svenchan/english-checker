@@ -24,7 +24,9 @@ export function WritingInput({
   feedback,
   onReset,
   topic,
-  onTopicChange
+  onTopicChange,
+  readOnly = false,
+  displayTopicText = null
 }) {
   const [cooldown, setCooldown] = useState(0);
   const [inputWarning, setInputWarning] = useState("");
@@ -93,12 +95,48 @@ export function WritingInput({
   const submitDisabled = feedback
     ? isChecking || cooldown > 0
     : isChecking || !canSubmit || (isTestMode && (!testSession || !testSession.started));
+  const resolvedTopicText =
+    displayTopicText?.trim() ||
+    testSession?.topic?.trim() ||
+    "";
   const textareaFocusClasses = isTestMode
     ? "focus:ring-red-500 focus:border-red-500"
     : "focus:ring-blue-500 focus:border-blue-500";
   const primaryButtonClasses = isTestMode
     ? "bg-red-600 hover:bg-red-700"
     : "bg-blue-600 hover:bg-blue-700";
+
+  if (readOnly) {
+    const topicBorder = isTestMode ? "border-red-200 bg-red-50" : "border-blue-200 bg-blue-50";
+    const topicLabel = isTestMode ? "text-red-700" : "text-blue-700";
+    const topicHeading = isTestMode ? "お題" : "テーマ";
+
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="mb-3 flex items-center justify-between">
+          <label className="text-lg font-semibold text-gray-800">英文を書いてください</label>
+          <span className="text-sm text-gray-500">
+            {text.length}/400 · {wordCount} 語
+          </span>
+        </div>
+
+        {resolvedTopicText && (
+          <div className={`mb-4 rounded-lg border p-4 ${topicBorder}`}>
+            <p className={`text-xs uppercase tracking-wider ${topicLabel}`}>{topicHeading}</p>
+            <p className="mt-1 text-base font-semibold text-gray-900 whitespace-pre-wrap break-words">
+              {resolvedTopicText}
+            </p>
+          </div>
+        )}
+
+        <textarea
+          value={text}
+          readOnly
+          className={`w-full h-48 p-4 border border-gray-300 rounded-lg resize-none bg-gray-50 cursor-default focus:outline-none ${textareaFocusClasses}`}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -109,7 +147,7 @@ export function WritingInput({
             {text.length}/400 · {wordCount} 語
           </span>
         </div>
-        {!isTestMode && !topic?.enabled && typeof onTopicChange === "function" && (
+        {!readOnly && !isTestMode && !topic?.enabled && typeof onTopicChange === "function" && (
           <div className="mt-2">
             <button
               type="button"
