@@ -4,7 +4,7 @@ import { enqueue } from "./queue";
 import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "@/config/prompts";
 import { ERRORS, HTTP_STATUS } from "@/config/errors";
 import { validateAndFixResponse } from "@/lib/validators";
-import sql from "@/lib/db";
+import { saveCheck } from "@/lib/saveCheck";
 import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
 import { sanitizeInput } from "@/lib/sanitize";
 import { normalizeTopicText } from "@/lib/normalizeTopicText";
@@ -12,15 +12,8 @@ import { CHECKER_MODES, TEST_MODE, buildTooShortFeedback } from "@/config/testMo
 import { countEffectiveWords, countSentences } from "@/lib/wordCount";
 
 const CLASS11_API_KEY = process.env.GROQ_API_KEY_11;
-const PROMPT_VERSION = "v2_topic";
-const DEFAULT_SCHOOL_ID = "e769da05-74f7-493c-817d-ad4a0f676f62";
 const GUEST_SESSION_COOKIE = "wc_session_id";
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30; // 30 days
-
-function sanitizeOrNull(value) {
-  const sanitized = sanitizeInput(value ?? "");
-  return sanitized || null;
-}
 
 function getGuestSession(req) {
   const sessionCookie = req.cookies?.get?.(GUEST_SESSION_COOKIE)?.value;
@@ -44,36 +37,6 @@ function attachGuestCookie(response, sessionInfo) {
   } catch (error) {
     console.error("Failed to attach guest session cookie:", error);
   }
-}
-
-async function updateSubmissionStatus(submissionId, status) {
-  if (!submissionId) return;
-  try {
-    await sql`
-      update writing_submissions
-      set status = ${status}
-      where id = ${submissionId}
-    `;
-  } catch (statusError) {
-    console.error("Failed to update submission status:", statusError);
-  }
-}
-
-function resolveOwnerContext(body, sessionId) {
-  const sanitizedStudentId = sanitizeInput(body?.studentId ?? "") || null;
-  if (sanitizedStudentId) {
-    return {
-      ownerType: "student",
-      studentId: sanitizedStudentId,
-      guestSessionId: null
-    };
-  }
-
-  return {
-    ownerType: "guest",
-    studentId: null,
-    guestSessionId: sessionId
-  };
 }
 
 export async function POST(req) {
@@ -105,8 +68,6 @@ export async function POST(req) {
         return NextResponse.json({ error: ERRORS.SERVER_ERROR }, { status: HTTP_STATUS.SERVER_ERROR });
       }
 
-      const owner = resolveOwnerContext(body, sessionInfo.sessionId);
-      const promptVersion = isTestMode ? TEST_MODE.promptVersion : PROMPT_VERSION;
       const wordCount = countEffectiveWords(text);
       const sentenceCount = countSentences(text);
       const hasTopicContext = Boolean(topicText);
@@ -114,46 +75,18 @@ export async function POST(req) {
       const shouldApplyPrepRule = isTestMode || hasTopicContext;
       const shouldIncludePrepFeedback = shouldApplyPrepRule && meetsPrepThreshold;
 
-      const schoolId = sanitizeOrNull(body?.schoolId) || DEFAULT_SCHOOL_ID;
-      let submission = null;
-      try {
-        const rows = await sql`
-          insert into writing_submissions (
-            owner_type,
-            student_id,
-            guest_session_id,
-            school_id,
-            class_id,
-            topic_text,
-            student_text,
-            prompt_version,
-            test_mode
-          ) values (
-            ${owner.ownerType},
-            ${owner.studentId},
-            ${owner.guestSessionId},
-            ${schoolId},
-            null,
-            ${topicText},
-            ${text},
-            ${promptVersion},
-            ${isTestMode}
-          )
-          returning id
-        `;
-        if (rows[0]?.id) {
-          submission = { id: rows[0].id };
-        }
-      } catch (submissionError) {
-        console.error("Failed to insert writing_submissions:", submissionError);
-      }
-
       if (isTestMode && wordCount < TEST_MODE.minWords) {
         const tooShortFeedback = buildTooShortFeedback(topicText);
-        await updateSubmissionStatus(submission?.id, "too_short");
+        const checkId = await saveCheck({
+          studentText: text,
+          topicText,
+          mode: requestedMode,
+          status: "too_short",
+          feedback: tooShortFeedback
+        });
         return NextResponse.json(
           {
-            submissionId: submission?.id ?? null,
+            submissionId: checkId,
             feedback: tooShortFeedback
           },
           { status: HTTP_STATUS.OK }
@@ -163,7 +96,6 @@ export async function POST(req) {
       const prompt = buildCheckPrompt(text, topicText, {
         includePrepFeedback: shouldIncludePrepFeedback
       });
-
 
       try {
         const apiKey = CLASS11_API_KEY;
@@ -193,8 +125,6 @@ export async function POST(req) {
           });
         }
 
-        const aiStart = Date.now();
-        let retries = 0;
         let groqResponse = await callGroq({ useJsonResponseFormat: true });
 
         if (!groqResponse.ok) {
@@ -202,9 +132,7 @@ export async function POST(req) {
           const msg = errFirst?.error?.message || "";
           if (/failed\s*_?generation/i.test(msg) || /Failed to generate JSON/i.test(msg)) {
             groqResponse = await callGroq({ useJsonResponseFormat: false });
-            retries += 1;
           } else {
-            await updateSubmissionStatus(submission?.id, "error");
             if (groqResponse.status === 429) {
               return NextResponse.json({ error: ERRORS.RATE_LIMIT_EXCEEDED }, { status: HTTP_STATUS.RATE_LIMIT });
             }
@@ -214,7 +142,6 @@ export async function POST(req) {
 
         if (!groqResponse.ok) {
           const errorData = await groqResponse.json().catch(() => ({}));
-          await updateSubmissionStatus(submission?.id, "error");
           if (groqResponse.status === 429) {
             return NextResponse.json({ error: ERRORS.RATE_LIMIT_EXCEEDED }, { status: HTTP_STATUS.RATE_LIMIT });
           }
@@ -247,56 +174,33 @@ export async function POST(req) {
         parsedFeedback.mode = requestedMode;
         parsedFeedback.status = "ok";
 
-        const aiResult = {
-          feedback: parsedFeedback,
-          model: data.model || GROQ_SETTINGS.model,
-          tokensIn: data.usage?.prompt_tokens || 0,
-          tokensOut: data.usage?.completion_tokens || 0,
-          latency: Date.now() - aiStart,
-          retries
-        };
-
-        if (aiResult.feedback) {
-          aiResult.feedback.topicText = topicText || null;
+        if (parsedFeedback) {
+          parsedFeedback.topicText = topicText || null;
         }
 
-        if (submission?.id) {
-          try {
-            await sql`
-              insert into ai_feedback (
-                submission_id,
-                feedback_json,
-                model,
-                tokens_in,
-                tokens_out,
-                latency_ms,
-                retries
-              ) values (
-                ${submission.id},
-                ${sql.json(aiResult.feedback)},
-                ${aiResult.model},
-                ${aiResult.tokensIn},
-                ${aiResult.tokensOut},
-                ${aiResult.latency},
-                ${aiResult.retries ?? 0}
-              )
-            `;
-            await updateSubmissionStatus(submission.id, "ok");
-          } catch (feedbackError) {
-            console.error("Failed to insert ai_feedback:", feedbackError);
-            await updateSubmissionStatus(submission.id, "error");
-          }
-        }
+        const checkId = await saveCheck({
+          studentText: text,
+          topicText,
+          mode: requestedMode,
+          status: "ok",
+          feedback: parsedFeedback
+        });
 
         return NextResponse.json(
           {
-            submissionId: submission?.id ?? null,
-            feedback: aiResult.feedback
+            submissionId: checkId,
+            feedback: parsedFeedback
           },
           { status: HTTP_STATUS.OK }
         );
       } catch (error) {
-        await updateSubmissionStatus(submission?.id, "error");
+        await saveCheck({
+          studentText: text,
+          topicText,
+          mode: requestedMode,
+          status: "error",
+          feedback: { status: "error", mode: requestedMode, topicText: topicText || null }
+        });
         throw error;
       }
     });
