@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CHECKER_MODES } from "@/config/testMode";
 import { Icons } from "@/shared/components/ui/Icons";
+import Link from "next/link";
 
 export function Header({ mode = CHECKER_MODES.PRACTICE }) {
   const isTestMode = mode === CHECKER_MODES.TEST;
@@ -66,7 +67,9 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
         <div className="flex items-center space-x-3">
           <Icons.BookOpen className="h-8 w-8" />
           <div>
-            <h1 className="text-2xl font-bold">英作文チェッカー</h1>
+            <Link href="/" className="text-2xl font-bold hover:text-gray-300">
+              英作文チェッカー
+            </Link>
           </div>
         </div>
         <div className="relative" ref={menuRef}>
@@ -111,4 +114,4 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
       </div>
     </div>
   );
-}
+ }
