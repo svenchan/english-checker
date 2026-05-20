@@ -16,6 +16,7 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
   const [error, setError] = useState("");
   const menuRef = useRef(null);
   const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
 
   useEffect(() => {
@@ -38,6 +39,15 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
     };
   }, [isMenuOpen]);
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const res = await fetch("/api/auth/me");
+      const data = await res.json();
+      setIsLoggedIn(data.loggedIn);
+    };
+    checkSession();
+  }, []);
+  
   const toggleMenu = () => {
     setIsMenuOpen((prev) => {
       const next = !prev;
@@ -66,7 +76,6 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
       setError("パスワードが正しくありません");
     }
   };
-
   return (
     <div className={`${headerBgClass} text-white p-6`}>
       <div className="flex items-center justify-between">
@@ -91,11 +100,15 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
           </button>
           {isMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 rounded-lg border border-gray-200 bg-white text-gray-900 shadow-lg z-10 p-4">
-              <form onSubmit={handlePasswordSubmit} className="space-y-3">
-                <div>
-                  <label htmlFor="history-password" className="block text-sm font-semibold text-gray-800">
-                    提出履歴を見る
-                  </label>
+              {isLoggedIn ? (
+                <button
+                  onClick={() => router.push("/teacher")}
+                  className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  提出履歴を見る
+                </button>
+              ) : (
+                <form onSubmit={handlePasswordSubmit} className="space-y-3">
                   <input
                     id="username"
                     type="text"
@@ -114,19 +127,20 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
                     placeholder="パスワードを入力"
                     autoComplete="current-password"
                   />
-                </div>
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                <button
-                  type="submit"
-                  className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                >
-                  開く
-                </button>
-              </form>
+                  {error && <p className="text-sm text-red-600">{error}</p>}
+                  <button
+                    type="submit"
+                    className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                  >
+                    開く
+                  </button>
+                </form>
+              )}
             </div>
           )}
         </div>
       </div>
     </div>
   );
- }
+  }
+ 

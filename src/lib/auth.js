@@ -5,6 +5,7 @@ import {
   SESSION_DAYS,
   sessionCookieOptions
 } from "@/lib/authConstants";
+import { cookies } from "next/headers";
 
 export { SESSION_COOKIE, sessionCookieOptions };
 
@@ -26,6 +27,31 @@ export async function createSession(teacherId) {
     values (${sessionId}, ${teacherId}, ${expiresAt})
   `;
   return sessionId;
+}
+
+
+//Checks if session_cookie is true keep user logged in
+export async function getSession(request) {
+  let sessionId;
+
+  if (request) {
+    sessionId = request.cookies.get(SESSION_COOKIE)?.value;
+  } else {
+    const cookieStore = cookies();
+    sessionId = cookieStore.get(SESSION_COOKIE)?.value;
+  }
+
+  if (!sessionId) return null;
+
+  const rows = await sql`
+    select id, teacher_id
+    from sessions
+    where id = ${sessionId}
+    and expires_at > now()
+    limit 1
+  `;
+
+  return rows[0] ?? null;
 }
 
 export async function deleteSession(sessionId) {
