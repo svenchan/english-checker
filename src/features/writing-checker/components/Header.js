@@ -17,6 +17,7 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
   const menuRef = useRef(null);
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
 
   useEffect(() => {
@@ -60,18 +61,24 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
     });
   };
 
+  const goToTeacher = () => {
+    setIsNavigating(true);
+    router.push("/teacher");
+  };
+
   const handlePasswordSubmit = async (event) => {
     event.preventDefault();
     const res = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
+      body: JSON.stringify({ username, password }),
+      redirect: "manual"
     });
-    if (res.ok || res.redirected) {
+    if (res.ok || res.status === 0) {
       setIsMenuOpen(false);
       setUsername("");
       setPassword("");
-      router.push("/teacher");
+      goToTeacher();
     } else {
       setError("パスワードが正しくありません");
     }
@@ -102,10 +109,11 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
             <div className="absolute right-0 mt-2 w-64 rounded-lg border border-gray-200 bg-white text-gray-900 shadow-lg z-10 p-4">
               {isLoggedIn ? (
                 <button
-                  onClick={() => router.push("/teacher")}
-                  className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                  onClick={() => goToTeacher()}
+                  disabled={isNavigating}
+                  className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 flex items-center justify-center"
                 >
-                  提出履歴を見る
+                  {isNavigating ? <Icons.Loader className="h-4 w-4 animate-spin" /> : "提出履歴を見る"}
                 </button>
               ) : (
                 <form onSubmit={handlePasswordSubmit} className="space-y-3">
@@ -130,9 +138,10 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
                   {error && <p className="text-sm text-red-600">{error}</p>}
                   <button
                     type="submit"
-                    className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                    disabled={isNavigating}
+                    className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 flex items-center justify-center"
                   >
-                    開く
+                   {isNavigating ? <Icons.Loader className="h-4 w-4 animate-spin" /> : "開く"} 
                   </button>
                 </form>
               )}
