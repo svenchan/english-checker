@@ -53,7 +53,7 @@ export async function POST(request) {
   }
 
   const sessionId = await createSession(teacher.id);
-  const response = NextResponse.redirect(new URL("/teacher", request.url));
+  const response = NextResponse.json({ success: true });
   setSessionCookie(response, sessionId);
   return response;
 }

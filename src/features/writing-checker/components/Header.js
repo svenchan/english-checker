@@ -11,12 +11,12 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
   const isTestMode = mode === CHECKER_MODES.TEST;
   const headerBgClass = isTestMode ? "bg-red-600" : "bg-blue-600";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const menuRef = useRef(null);
   const router = useRouter();
 
-  const ACCESS_PASSWORD = "Pineapple26";
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -43,17 +43,23 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
       const next = !prev;
       if (!next) {
         setPassword("");
+        setUsername("");
         setError("");
       }
       return next;
     });
   };
 
-  const handlePasswordSubmit = (event) => {
+  const handlePasswordSubmit = async (event) => {
     event.preventDefault();
-    if (password === ACCESS_PASSWORD) {
-      setError("");
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    if (res.ok || res.redirected) {
       setIsMenuOpen(false);
+      setUsername("");
       setPassword("");
       router.push("/teacher");
     } else {
@@ -90,6 +96,15 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
                   <label htmlFor="history-password" className="block text-sm font-semibold text-gray-800">
                     提出履歴を見る
                   </label>
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="ユーザー名"
+                    autoComplete="username"
+                  />
                   <input
                     id="history-password"
                     type="password"
