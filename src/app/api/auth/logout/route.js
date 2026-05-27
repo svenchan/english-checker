@@ -8,7 +8,7 @@ import {
 export async function POST(request) {
   const sessionId = request.cookies.get(SESSION_COOKIE)?.value;
   await deleteSession(sessionId);
-  const response = NextResponse.redirect(new URL("/login", request.url));
+  const response = NextResponse.redirect(new URL("/", request.url));
   clearSessionCookie(response);
   return response;
 }
