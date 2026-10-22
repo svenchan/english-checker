@@ -58,7 +58,7 @@ ${exampleOutput}
 }
 
 export const GROQ_SETTINGS = {
-  model: "llama-3.3-70b-versatile",
+  model: "openai/gpt-oss-20b",
   // CHANGED: Reduced from 0.5 to 0.3
   // Lower temperature = more consistent, focused responses
   temperature: 0.2,
@@ -66,6 +66,8 @@ export const GROQ_SETTINGS = {
   // Still prevents extreme spikes but allows detailed grammar explanations
   // Typical response: 400-800 tokens
   max_tokens: 600,
+  // NEW: gpt-oss models are reasoning models. "low" keeps latency and token use down
+  reasoning_effort: "low",
   response_format: { type: "json_object" }
 };
 
