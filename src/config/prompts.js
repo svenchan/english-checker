@@ -65,7 +65,7 @@ export const GROQ_SETTINGS = {
   // CHANGED: Increased to 1200 to allow for educational explanations
   // Still prevents extreme spikes but allows detailed grammar explanations
   // Typical response: 400-800 tokens
-  max_tokens: 600,
+  max_tokens: 1200,
   // NEW: gpt-oss models are reasoning models. "low" keeps latency and token use down
   reasoning_effort: "low",
   response_format: { type: "json_object" }
