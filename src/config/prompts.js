@@ -61,7 +61,7 @@ export const GROQ_SETTINGS = {
   model: "openai/gpt-oss-20b",
   // CHANGED: Reduced from 0.5 to 0.3
   // Lower temperature = more consistent, focused responses
-  temperature: 0.2,
+  temperature: 0.5,
   // CHANGED: Increased to 1200 to allow for educational explanations
   // Still prevents extreme spikes but allows detailed grammar explanations
   // Typical response: 400-800 tokens
