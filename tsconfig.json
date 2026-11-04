@@ -18,10 +18,9 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
-    "baseUrl": "src",
     "paths": {
       "@/*": [
-        "*"
+        "./src/*"
       ]
     },
     "allowImportingTsExtensions": true,
