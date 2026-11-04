@@ -2,23 +2,23 @@
 
 // CHANGED: Shortened from 60+ characters to ~40 characters
 // Saves ~5-10 tokens per request
-export const SYSTEM_MESSAGE = "日本の中学生向け英作文チェッカー。JSON形式で回答。文法的に正しい英文は絶対に間違いとしない。文法エラーと綴りミスのみ訂正。";
+export const SYSTEM_MESSAGE = "日本の中学生向け英作文チェッカー。JSON形式で回答。文法エラーと綴りミスのみ訂正。";
 
 // CHANGED: Balanced prompt - educational but not too verbose
 // Emphasizes clear explanations with grammar rules
 export function buildCheckPrompt(text, topicText = null, options = {}) {
   const { includePrepFeedback = true } = options;
-  // NEW: Limit input to 500 characters to prevent huge prompts
-  const limitedText = text.slice(0, 500);
+  // NEW: Limit input to 400 characters to prevent huge prompts
+  const limitedText = text.slice(0, 400);
   
   // Optional: Log if text was truncated
-  if (text.length > 500) {
-    console.warn(`Input truncated: ${text.length} → 500 characters`);
+  if (text.length > 400) {
+    console.warn(`Input truncated: ${text.length} → 400 characters`);
   }
 
   const topicSection = topicText
     ? `指定トピック: "${topicText}"
-${includePrepFeedback ? "- テーマから逸れた箇所はPREPチェック内で必ず指摘すること。\n" : "- テーマから逸れた箇所は一言で指摘する（PREP分析は不要）。\n"}
+${includePrepFeedback ? "- テーマから逸れた箇所はPREPチェック内で指摘すること。\n" : "- テーマから逸れた箇所は一言で指摘する（PREP分析は不要）。\n"}
 `
     : "";
 
