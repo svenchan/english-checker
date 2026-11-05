@@ -10,7 +10,7 @@
 
 /**
  * @typedef {Object} FeedbackResponse
- * @property {number} overallScore - Overall grammar score (0-100).
+ * @property {number} overallScore - Score out of 100 from correction counts (spelling −5, grammar/vocab −10).
  * @property {Mistake[]} mistakes - List of detected mistakes.
  * @property {"ok"|"too_short"|"error"} [status] - Submission status coming from the server.
  * @property {string|null} [topicText] - Topic text (if provided).

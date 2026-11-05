@@ -2,6 +2,8 @@
  * Validate and fix AI responses
  */
 
+import { scoreFromMistakes } from "./score.js";
+
 export function validateAndFixResponse(parsedFeedback, options = {}) {
   const expectTopicFeedback = Boolean(options.expectTopicFeedback);
   // Ensure required fields exist
@@ -45,10 +47,6 @@ export function validateAndFixResponse(parsedFeedback, options = {}) {
   if (typeof parsedFeedback.status !== "string") {
     parsedFeedback.status = "ok";
   }
-  if (typeof parsedFeedback.overallScore !== "number") {
-    parsedFeedback.overallScore = 0;
-  }
-
   const defaultPrepChecklist = {
     point: { met: false, note: "" },
     reason: { met: false, note: "" },
@@ -87,16 +85,8 @@ export function validateAndFixResponse(parsedFeedback, options = {}) {
     tip: mistake.tip || "もう一度確認してみましょう",
     type: mistake.type || "grammar"
   }));
-  
-  // Fix scoring logic: if there are mistakes but score is 100, recalculate
-  if (parsedFeedback.mistakes.length > 0 && parsedFeedback.overallScore >= 100) {
-    parsedFeedback.overallScore = Math.max(0, 100 - (parsedFeedback.mistakes.length * 15));
-  }
-  
-  // If no mistakes but score is low, set to 100
-  if (parsedFeedback.mistakes.length === 0 && parsedFeedback.overallScore < 80) {
-    parsedFeedback.overallScore = 100;
-  }
-  
+
+  parsedFeedback.overallScore = scoreFromMistakes(parsedFeedback.mistakes);
+
   return parsedFeedback;
 }
