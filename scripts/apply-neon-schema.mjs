@@ -39,7 +39,8 @@ if (!databaseUrl) {
 const migrationPaths = [
   "supabase/migrations/20260219_simplified_checks.sql",
   "supabase/migrations/20260519_teacher_auth.sql",
-  "supabase/migrations/20260519_teacher_auth_rebuild.sql"
+  "supabase/migrations/20260519_teacher_auth_rebuild.sql",
+  "supabase/migrations/20261105_check_rate_limits.sql"
 ].map((rel) => resolve(root, rel));
 
 const sql = postgres(databaseUrl, { max: 1 });

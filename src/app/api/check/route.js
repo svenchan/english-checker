@@ -10,6 +10,10 @@ import { sanitizeInput } from "@/lib/sanitize";
 import { normalizeTopicText } from "@/lib/normalizeTopicText";
 import { CHECKER_MODES, TEST_MODE, buildTooShortFeedback } from "@/config/testMode";
 import { countEffectiveWords, countSentences } from "@/lib/wordCount";
+import {
+  releaseCheckRateLimit,
+  tryConsumeCheckRateLimit
+} from "@/lib/checkRateLimit";
 
 const CLASS11_API_KEY = process.env.GROQ_API_KEY_11;
 const GUEST_SESSION_COOKIE = "wc_session_id";
@@ -24,8 +28,26 @@ function getGuestSession(req) {
   };
 }
 
+function rateLimitedResponse(retryAfterSeconds) {
+  return NextResponse.json(
+    {
+      error: ERRORS.RATE_LIMIT_EXCEEDED,
+      retryAfterSeconds
+    },
+    {
+      status: HTTP_STATUS.RATE_LIMIT,
+      headers: { "Retry-After": String(retryAfterSeconds) }
+    }
+  );
+}
+
+async function releaseAcquiredSlot(slot) {
+  if (!slot?.acquired) return;
+  await releaseCheckRateLimit(slot.sessionId, slot.previousCheckedAt);
+}
+
 function attachGuestCookie(response, sessionInfo) {
-  if (!response || !sessionInfo?.shouldSetCookie) return;
+  if (!response || !sessionInfo?.sessionId) return;
   try {
     response.cookies.set(GUEST_SESSION_COOKIE, sessionInfo.sessionId, {
       httpOnly: true,
@@ -93,6 +115,11 @@ export async function POST(req) {
         );
       }
 
+      const rateLimit = await tryConsumeCheckRateLimit(sessionInfo.sessionId);
+      if (rateLimit.limited) {
+        return rateLimitedResponse(rateLimit.retryAfterSeconds);
+      }
+
       const prompt = buildCheckPrompt(text, topicText, {
         includePrepFeedback: shouldIncludePrepFeedback
       });
@@ -134,6 +161,7 @@ export async function POST(req) {
             groqResponse = await callGroq({ useJsonResponseFormat: false });
           } else {
             if (groqResponse.status === 429) {
+              await releaseAcquiredSlot(rateLimit);
               return NextResponse.json({ error: ERRORS.RATE_LIMIT_EXCEEDED }, { status: HTTP_STATUS.RATE_LIMIT });
             }
             throw new Error(msg || ERRORS.GROQ_API_ERROR);
@@ -143,6 +171,7 @@ export async function POST(req) {
         if (!groqResponse.ok) {
           const errorData = await groqResponse.json().catch(() => ({}));
           if (groqResponse.status === 429) {
+            await releaseAcquiredSlot(rateLimit);
             return NextResponse.json({ error: ERRORS.RATE_LIMIT_EXCEEDED }, { status: HTTP_STATUS.RATE_LIMIT });
           }
           throw new Error(errorData.error?.message || ERRORS.GROQ_API_ERROR);
@@ -194,6 +223,7 @@ export async function POST(req) {
           { status: HTTP_STATUS.OK }
         );
       } catch (error) {
+        await releaseAcquiredSlot(rateLimit);
         await saveCheck({
           studentText: text,
           topicText,
