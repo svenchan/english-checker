@@ -337,7 +337,11 @@ function AccountMenu({
         aria-label="メニューを開く"
         className={buttonClassName}
       >
-        <Icons.Menu className="h-6 w-6" />
+        {placement === "side" ? (
+          <Icons.LogIn className="h-5 w-5" />
+        ) : (
+          <Icons.Menu className="h-6 w-6" />
+        )}
       </button>
       {isMenuOpen && (
         <div className={panelClassName}>

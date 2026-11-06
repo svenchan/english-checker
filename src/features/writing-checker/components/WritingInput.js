@@ -18,6 +18,7 @@ export function WritingInput({
   remainingMs = TEST_MODE.durationMs,
   onTestSessionRestart,
   onTestTimerStart,
+  onExitTimeAttack,
   text,
   onChange,
   onCheck,
@@ -190,7 +191,10 @@ export function WritingInput({
 
         <div ref={surfaceRef} className="min-h-[6rem] min-w-0 flex-1 overflow-hidden">
           {isTestMode && !hasTestStarted && !showReviewedText ? (
-            <div className="flex h-full items-center justify-center px-8">
+            <div className="flex h-full flex-col items-center justify-center gap-8 px-8">
+              <h1 className="text-center text-4xl font-bold tracking-wide text-red-600 md:text-5xl">
+                タイムアタック！
+              </h1>
               <button
                 type="button"
                 onClick={() => onTestTimerStart?.()}
@@ -241,6 +245,19 @@ export function WritingInput({
           </span>
 
           <div className="flex items-center gap-2">
+            {isTestMode && hasTestStarted && !testSession?.submitted && (
+              <Tooltip content="最初の画面に戻る" position="top-right">
+                <button
+                  type="button"
+                  onClick={() => onExitTimeAttack?.()}
+                  disabled={isChecking}
+                  aria-label="最初の画面に戻る"
+                  className="inline-flex h-12 w-12 items-center justify-center border-0 bg-transparent p-0 text-slate-500 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Icons.LogOut className="h-5 w-5" />
+                </button>
+              </Tooltip>
+            )}
             <button
               onClick={handlePrimaryClick}
               disabled={submitDisabled}

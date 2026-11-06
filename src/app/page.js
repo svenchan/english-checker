@@ -141,6 +141,11 @@ export default function Page() {
     }
   };
 
+  const handleExitTimeAttack = () => {
+    reset();
+    startNewSession();
+  };
+
   return (
     <div className="h-screen bg-white">
       <div className="flex h-full min-h-0 flex-col md:flex-row">
@@ -168,6 +173,7 @@ export default function Page() {
               remainingMs={mode === CHECKER_MODES.TEST ? remainingMs : TEST_MODE.durationMs}
               onTestSessionRestart={handleTestSessionRestart}
               onTestTimerStart={startTimer}
+              onExitTimeAttack={handleExitTimeAttack}
               text={studentText}
               onChange={setStudentText}
               onCheck={handleCheck}
