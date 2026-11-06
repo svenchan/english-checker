@@ -145,7 +145,6 @@ export function WritingInput({
   if (layout === "split") {
     const showReviewedText = Boolean(feedback);
     const reviewTokens = mistakeHighlight?.tokens;
-    const footerBorder = isTestMode ? "border-red-100 bg-red-50/40" : "border-sky-100 bg-sky-50/70";
     const countChipClass = isTestMode
       ? "border-red-200 text-red-800"
       : "border-sky-200 text-sky-800";
@@ -259,7 +258,7 @@ export function WritingInput({
           </p>
         )}
 
-        <div className={`relative flex shrink-0 flex-wrap items-center justify-between gap-3 border-t px-4 py-3 ${footerBorder}`}>
+        <div className="relative flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-white bg-white px-4 py-3">
           <span className={`rounded-full border bg-white px-3 py-1.5 text-sm font-medium shadow-sm ${countChipClass}`}>
             {wordCount}語 · {text.length}/400
           </span>

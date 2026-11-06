@@ -5,9 +5,36 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CHECKER_MODES } from "@/config/testMode";
 import { Icons } from "@/shared/components/ui/Icons";
+import { Tooltip } from "@/shared/components/ui/Tooltip";
 import Link from "next/link";
 
-export function Header({ mode = CHECKER_MODES.PRACTICE }) {
+const MODE_CONFIG = [
+  {
+    id: CHECKER_MODES.PRACTICE,
+    label: "練習モード",
+    description: "自由にテーマを選んで練習",
+    icon: Icons.Pen
+  },
+  {
+    id: CHECKER_MODES.TEST,
+    label: "テストモード",
+    description: "5分の本番シミュレーション",
+    icon: Icons.Clock
+  }
+];
+
+const MODE_STYLES = {
+  [CHECKER_MODES.PRACTICE]: {
+    active: "border-blue-600 bg-blue-100 text-blue-700",
+    inactive: "border-gray-200 bg-white text-gray-500 hover:border-blue-300 hover:text-blue-600"
+  },
+  [CHECKER_MODES.TEST]: {
+    active: "border-red-600 bg-red-100 text-red-700",
+    inactive: "border-gray-200 bg-white text-gray-500 hover:border-red-300 hover:text-red-600"
+  }
+};
+
+export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onModeChange }) {
   const isTestMode = mode === CHECKER_MODES.TEST;
   const headerBgClass = isTestMode ? "bg-red-600" : "bg-blue-600";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -83,17 +110,52 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
       setError("パスワードが正しくありません");
     }
   };
+  const hasModeSwitch = typeof onModeChange === "function";
+
   return (
-    <div className={`${headerBgClass} text-white p-6`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <Icons.BookOpen className="h-8 w-8" />
-          <div>
-            <Link href="/" className="text-2xl font-bold hover:text-gray-300">
-              英作文チェッカー
-            </Link>
+    <div className={showBrand ? `${headerBgClass} p-6 text-white` : "shrink-0 bg-white px-4 py-3 text-slate-800"}>
+      <div className={`flex items-center gap-3 ${showBrand || hasModeSwitch ? "justify-between" : "justify-end"}`}>
+        {hasModeSwitch && (
+          <div className="flex items-center gap-2">
+            {MODE_CONFIG.map((modeOption) => {
+              const Icon = modeOption.icon;
+              const isActive = mode === modeOption.id;
+              return (
+                <Tooltip
+                  key={modeOption.id}
+                  content={`${modeOption.label} — ${modeOption.description}`}
+                  position="bottom"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => {
+                      if (modeOption.id !== mode) {
+                        onModeChange(modeOption.id);
+                      }
+                    }}
+                    className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 transition-colors ${
+                      isActive ? MODE_STYLES[modeOption.id].active : MODE_STYLES[modeOption.id].inactive
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="sr-only">{modeOption.label}</span>
+                  </button>
+                </Tooltip>
+              );
+            })}
           </div>
-        </div>
+        )}
+        {showBrand && (
+          <div className="flex items-center space-x-3">
+            <Icons.BookOpen className="h-8 w-8" />
+            <div>
+              <Link href="/" className="text-2xl font-bold hover:text-gray-300">
+                英作文チェッカー
+              </Link>
+            </div>
+          </div>
+        )}
         <div className="relative" ref={menuRef}>
           <button
             type="button"
@@ -101,7 +163,11 @@ export function Header({ mode = CHECKER_MODES.PRACTICE }) {
             aria-haspopup="menu"
             aria-expanded={isMenuOpen}
             aria-label="メニューを開く"
-            className="p-2 rounded-lg hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className={`rounded-lg p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+              showBrand
+                ? "hover:bg-white/10 focus-visible:outline-white"
+                : "hover:bg-slate-100 focus-visible:outline-blue-600"
+            }`}
           >
             <Icons.Menu className="h-6 w-6" />
           </button>

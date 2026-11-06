@@ -11,7 +11,6 @@ import {
   createDefaultTopicState,
   deriveTopicText
 } from "../features/writing-checker/lib/topicState";
-import { ModeSidebar } from "../features/writing-checker/components/ModeSidebar";
 import { useTestSession } from "../features/writing-checker/hooks/useTestSession";
 import { CHECKER_MODES, TEST_MODE } from "@/config/testMode";
 
@@ -143,12 +142,10 @@ export default function Page() {
   };
 
   return (
-    <div className="h-screen bg-sky-50">
-      <div className="flex h-full flex-col">
-        <Header mode={mode} />
-        <div className="flex min-h-0 flex-1">
-          <ModeSidebar activeMode={mode} onModeChange={handleModeChange} />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
+    <div className="h-screen bg-white">
+      <div className="flex h-full min-h-0 flex-col md:flex-row">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-white">
+          <Header mode={mode} showBrand={false} onModeChange={handleModeChange} />
             <WritingInput
               layout="split"
               surfaceRef={surfaceRef}
@@ -168,16 +165,15 @@ export default function Page() {
               topic={topic}
               onTopicChange={mode === CHECKER_MODES.PRACTICE ? setTopic : undefined}
             />
-            <CorrectionsPanel
-              feedback={feedback}
-              studentText={studentText}
-              mistakeHighlight={mistakeHighlight}
-              mode={mode}
-              isChecking={isChecking}
-              onSelectMistake={focusMistakeInWriting}
-            />
-          </div>
         </div>
+        <CorrectionsPanel
+          feedback={feedback}
+          studentText={studentText}
+          mistakeHighlight={mistakeHighlight}
+          mode={mode}
+          isChecking={isChecking}
+          onSelectMistake={focusMistakeInWriting}
+        />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { CHECKER_MODES, TEST_MODE } from "@/config/testMode";
 import { Icons } from "@/shared/components/ui/Icons";
 import { Tooltip } from "@/shared/components/ui/Tooltip";
@@ -160,6 +161,10 @@ export function CorrectionsPanel({
       className={`flex min-h-0 w-full flex-1 flex-col border-t md:w-[340px] md:flex-none md:border-l md:border-t-0 ${shellClass}`}
     >
       <div className={`shrink-0 border-b px-4 py-4 ${headerBorder}`}>
+        <Link href="/" className="mb-4 flex items-center gap-2 text-black hover:text-slate-700">
+          <Icons.BookOpen className="h-7 w-7 shrink-0 text-blue-600" />
+          <span className="text-lg font-bold leading-tight">英作文チェッカー</span>
+        </Link>
         <div className="flex items-center justify-between gap-3">
           <h2 className={`text-base font-semibold ${titleClass}`}>添削</h2>
           {feedback && (
