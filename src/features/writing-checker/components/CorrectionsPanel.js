@@ -8,6 +8,13 @@ import { Tooltip } from "@/shared/components/ui/Tooltip";
 import { buildCopyText, getMistakeTypeColor, getMistakeTypeLabel, getScoreColor } from "@/lib/utils";
 import { countEffectiveWords, countSentences } from "@/lib/wordCount";
 
+const MISTAKE_FILTERS = [
+  { id: "all", label: "すべて" },
+  { id: "spelling", label: "スペル" },
+  { id: "vocabulary", label: "単語" },
+  { id: "grammar", label: "文法" }
+];
+
 function renderCorrectedWithBold(original, corrected) {
   if (!original || !corrected) return corrected;
 
@@ -57,6 +64,7 @@ export function CorrectionsPanel({
   const panelRef = useRef(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [mistakeFilter, setMistakeFilter] = useState("all");
   const mistakes = feedback?.mistakes || [];
   const hasMistakes = mistakes.length > 0;
   const isTooShort = feedback?.status === "too_short";
@@ -125,6 +133,10 @@ export function CorrectionsPanel({
   );
   const topicContext = typeof feedback?.topicText === "string" ? feedback.topicText.trim() : "";
   const shouldShowTopicFeedback = hasMistakes && hasTopicFeedback && topicContext.length > 0;
+
+  useEffect(() => {
+    setMistakeFilter("all");
+  }, [feedback]);
 
   useEffect(() => {
     if (!selectedMistakeId || !panelRef.current) return;
@@ -334,7 +346,44 @@ export function CorrectionsPanel({
               </div>
             )}
 
+            {hasMistakes && (
+              <div className="flex flex-wrap gap-2">
+                {MISTAKE_FILTERS.map((filter) => {
+                  const count = filter.id === "all"
+                    ? mistakes.length
+                    : mistakes.filter((mistake) => mistake.type === filter.id).length;
+                  if (count === 0) return null;
+                  const active = mistakeFilter === filter.id;
+                  return (
+                    <button
+                      key={filter.id}
+                      type="button"
+                      onClick={() => setMistakeFilter(filter.id)}
+                      aria-pressed={active}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${
+                        active
+                          ? "border-slate-200 bg-slate-100 font-semibold text-slate-900"
+                          : "border-slate-200 bg-white font-medium text-slate-500 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>{filter.label}</span>
+                      <span
+                        className={`inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs ${
+                          active
+                            ? "bg-slate-200 font-semibold text-slate-800"
+                            : "border border-slate-200 font-medium text-slate-500"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {hasMistakes && getMistakeIdForIndex && mistakes.map((mistake, idx) => {
+              if (mistakeFilter !== "all" && mistake.type !== mistakeFilter) return null;
               const mistakeId = getMistakeIdForIndex(idx);
               const isSelected = selectedMistakeId === mistakeId;
               return (

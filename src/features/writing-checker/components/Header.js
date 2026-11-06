@@ -110,6 +110,54 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
     }
   };
   const hasModeSwitch = typeof onModeChange === "function";
+  const accountMenu = (
+    <AccountMenu
+      menuRef={menuRef}
+      isMenuOpen={isMenuOpen}
+      onToggle={toggleMenu}
+      isLoggedIn={isLoggedIn}
+      isNavigating={isNavigating}
+      onOpenHistory={goToTeacher}
+      username={username}
+      password={password}
+      error={error}
+      onUsernameChange={setUsername}
+      onPasswordChange={setPassword}
+      onSubmit={handlePasswordSubmit}
+      placement={hasModeSwitch ? "side" : "below"}
+      buttonClassName={
+        hasModeSwitch
+          ? "flex h-10 w-10 items-center justify-center rounded-lg p-0 text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:bg-slate-100 focus-visible:outline-blue-600"
+          : "rounded-lg p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:bg-white/10 focus-visible:outline-white"
+      }
+    />
+  );
+
+  if (hasModeSwitch) {
+    return (
+      <>
+        {testTimer && (
+          <div className="relative h-16 shrink-0 bg-white text-slate-800">
+            <div
+              className={`pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 text-sm font-semibold ${
+                testTimer.submitted
+                  ? "text-green-700"
+                  : testTimer.started
+                    ? "text-red-700"
+                    : "text-gray-600"
+              }`}
+            >
+              <Icons.Clock className="h-4 w-4" />
+              <span>{formatTimer(testTimer.remainingMs)}</span>
+            </div>
+          </div>
+        )}
+        <StudentEdgeBar mode={mode} onModeChange={onModeChange} isMenuOpen={isMenuOpen}>
+          {accountMenu}
+        </StudentEdgeBar>
+      </>
+    );
+  }
 
   return (
     <div className={showBrand ? `${headerBgClass} p-6 text-white` : "relative shrink-0 bg-white px-4 py-3 text-slate-800"}>
@@ -127,42 +175,7 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
           <span>{formatTimer(testTimer.remainingMs)}</span>
         </div>
       )}
-      <div className={`flex items-center gap-3 ${showBrand || hasModeSwitch ? "justify-between" : "justify-end"}`}>
-        {hasModeSwitch && (
-          <div className="flex items-center gap-2">
-            {MODE_CONFIG.map((modeOption) => {
-              const Icon = modeOption.icon;
-              const isActive = mode === modeOption.id;
-              return (
-                <Tooltip
-                  key={modeOption.id}
-                  content={
-                    modeOption.id === CHECKER_MODES.TEST
-                      ? modeOption.label
-                      : `${modeOption.label} — ${modeOption.description}`
-                  }
-                  position="bottom"
-                >
-                  <button
-                    type="button"
-                    aria-pressed={isActive}
-                    onClick={() => {
-                      if (modeOption.id !== mode) {
-                        onModeChange(modeOption.id);
-                      }
-                    }}
-                    className={`flex h-10 w-10 items-center justify-center border-0 bg-transparent transition-colors ${
-                      isActive ? MODE_STYLES[modeOption.id].active : MODE_STYLES[modeOption.id].inactive
-                    }`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="sr-only">{modeOption.label}</span>
-                  </button>
-                </Tooltip>
-              );
-            })}
-          </div>
-        )}
+      <div className={`flex items-center gap-3 ${showBrand ? "justify-between" : "justify-end"}`}>
         {showBrand && (
           <div className="flex items-center space-x-3">
             <Icons.BookOpen className="h-8 w-8" />
@@ -173,65 +186,201 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
             </div>
           </div>
         )}
-        <div className="relative" ref={menuRef}>
-          <button
-            type="button"
-            onClick={toggleMenu}
-            aria-haspopup="menu"
-            aria-expanded={isMenuOpen}
-            aria-label="メニューを開く"
-            className={`rounded-lg p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
-              showBrand
-                ? "hover:bg-white/10 focus-visible:outline-white"
-                : "hover:bg-slate-100 focus-visible:outline-blue-600"
-            }`}
+        {accountMenu}
+      </div>
+    </div>
+  );
+}
+
+function ModeSwitch({ mode, onModeChange, tooltipPosition = "bottom", focusable = true }) {
+  return (
+    <div className={tooltipPosition === "left" ? "flex flex-col items-center gap-1" : "flex items-center gap-2"}>
+      {MODE_CONFIG.map((modeOption) => {
+        const Icon = modeOption.icon;
+        const isActive = mode === modeOption.id;
+        return (
+          <Tooltip
+            key={modeOption.id}
+            content={
+              modeOption.id === CHECKER_MODES.TEST
+                ? modeOption.label
+                : `${modeOption.label} — ${modeOption.description}`
+            }
+            position={tooltipPosition}
           >
-            <Icons.Menu className="h-6 w-6" />
-          </button>
-          {isMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 rounded-lg border border-gray-200 bg-white text-gray-900 shadow-lg z-10 p-4">
-              {isLoggedIn ? (
-                <button
-                  onClick={() => goToTeacher()}
-                  disabled={isNavigating}
-                  className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 flex items-center justify-center"
-                >
-                  {isNavigating ? <Icons.Loader className="h-4 w-4 animate-spin" /> : "提出履歴を見る"}
-                </button>
-              ) : (
-                <form onSubmit={handlePasswordSubmit} className="space-y-3">
-                  <input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="ユーザー名"
-                    autoComplete="username"
-                  />
-                  <input
-                    id="history-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="パスワードを入力"
-                    autoComplete="current-password"
-                  />
-                  {error && <p className="text-sm text-red-600">{error}</p>}
-                  <button
-                    type="submit"
-                    disabled={isNavigating}
-                    className="w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 flex items-center justify-center"
-                  >
-                   {isNavigating ? <Icons.Loader className="h-4 w-4 animate-spin" /> : "開く"} 
-                  </button>
-                </form>
-              )}
-            </div>
-          )}
+            <button
+              type="button"
+              tabIndex={focusable ? 0 : -1}
+              aria-pressed={isActive}
+              onClick={() => {
+                if (modeOption.id !== mode) {
+                  onModeChange(modeOption.id);
+                }
+              }}
+              className={`flex h-10 w-10 items-center justify-center border-0 bg-transparent transition-colors ${
+                isActive ? MODE_STYLES[modeOption.id].active : MODE_STYLES[modeOption.id].inactive
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              <span className="sr-only">{modeOption.label}</span>
+            </button>
+          </Tooltip>
+        );
+      })}
+    </div>
+  );
+}
+
+function StudentEdgeBar({ mode, onModeChange, isMenuOpen, children }) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(false);
+  const hoveringRef = useRef(false);
+
+  useEffect(() => {
+    if (!isMenuOpen && !hoveringRef.current) {
+      setDesktopOpen(false);
+    }
+  }, [isMenuOpen]);
+
+  const revealDesktop = () => {
+    hoveringRef.current = true;
+    setDesktopOpen(true);
+  };
+
+  const hideDesktop = () => {
+    hoveringRef.current = false;
+    if (!isMenuOpen) {
+      setDesktopOpen(false);
+    }
+  };
+
+  const controlsOpen = mobileOpen || desktopOpen;
+
+  return (
+    <>
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="サイドバーを閉じる"
+          className="fixed inset-0 z-40 bg-transparent md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <div
+        className="fixed inset-y-0 right-0 z-50 w-3"
+        onMouseEnter={revealDesktop}
+        onMouseLeave={hideDesktop}
+      >
+        <div
+          className={`absolute inset-y-0 right-0 flex items-center transition-transform duration-200 ${
+            controlsOpen ? "translate-x-0" : "translate-x-[calc(100%-1.25rem)]"
+          }`}
+        >
+        <button
+          type="button"
+          onClick={() => setMobileOpen((prev) => !prev)}
+          aria-expanded={controlsOpen}
+          aria-label={controlsOpen ? "サイドバーを閉じる" : "サイドバーを開く"}
+          className="flex h-16 w-5 shrink-0 items-center justify-center rounded-l-md border border-r-0 border-slate-200 bg-white shadow-md"
+        >
+          <span className="h-6 w-0.5 rounded-full bg-slate-400" />
+        </button>
+        <div
+          aria-hidden={!controlsOpen}
+          className="flex h-[calc(100%-3rem)] w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white shadow-lg"
+        >
+          <ModeSwitch
+            mode={mode}
+            tooltipPosition="left"
+            focusable={controlsOpen}
+            onModeChange={(nextMode) => {
+              onModeChange(nextMode);
+              setMobileOpen(false);
+            }}
+          />
+          <div className="mt-1">{children}</div>
+        </div>
         </div>
       </div>
+    </>
+  );
+}
+
+function AccountMenu({
+  menuRef,
+  isMenuOpen,
+  onToggle,
+  isLoggedIn,
+  isNavigating,
+  onOpenHistory,
+  username,
+  password,
+  error,
+  onUsernameChange,
+  onPasswordChange,
+  onSubmit,
+  placement,
+  buttonClassName
+}) {
+  const panelClassName =
+    placement === "side"
+      ? "absolute right-full top-0 z-10 mr-2 w-64 rounded-lg border border-gray-200 bg-white p-4 text-gray-900 shadow-lg"
+      : "absolute right-0 z-10 mt-2 w-64 rounded-lg border border-gray-200 bg-white p-4 text-gray-900 shadow-lg";
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-haspopup="menu"
+        aria-expanded={isMenuOpen}
+        aria-label="メニューを開く"
+        className={buttonClassName}
+      >
+        <Icons.Menu className="h-6 w-6" />
+      </button>
+      {isMenuOpen && (
+        <div className={panelClassName}>
+          {isLoggedIn ? (
+            <button
+              onClick={onOpenHistory}
+              disabled={isNavigating}
+              className="flex w-full items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              {isNavigating ? <Icons.Loader className="h-4 w-4 animate-spin" /> : "提出履歴を見る"}
+            </button>
+          ) : (
+            <form onSubmit={onSubmit} className="space-y-3">
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(event) => onUsernameChange(event.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="ユーザー名"
+                autoComplete="username"
+              />
+              <input
+                id="history-password"
+                type="password"
+                value={password}
+                onChange={(event) => onPasswordChange(event.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="パスワードを入力"
+                autoComplete="current-password"
+              />
+              {error && <p className="text-sm text-red-600">{error}</p>}
+              <button
+                type="submit"
+                disabled={isNavigating}
+                className="flex w-full items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              >
+                {isNavigating ? <Icons.Loader className="h-4 w-4 animate-spin" /> : "開く"}
+              </button>
+            </form>
+          )}
+        </div>
+      )}
     </div>
   );
 }

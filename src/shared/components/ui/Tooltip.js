@@ -45,6 +45,8 @@ export function Tooltip({
         return "top-full left-1/2 -translate-x-1/2 mt-2";
       case "bottom-right":
         return "top-full right-0 mt-2";
+      case "left":
+        return "right-full top-1/2 mr-2 -translate-y-1/2";
       case "top":
       default:
         return "bottom-full left-1/2 -translate-x-1/2 mb-2";
