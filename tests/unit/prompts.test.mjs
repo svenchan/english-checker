@@ -4,8 +4,6 @@ import assert from "node:assert/strict";
 const { SYSTEM_MESSAGE, buildCheckPrompt } = await import("../../src/config/prompts.js");
 
 const OTHER_PUNCT_LINE = ", や . の前の空白など、それ以外の句読点も綴りとして指摘する。";
-const SPELLING_EXPLANATION_LINE =
-  "つづりの explanation は、なぜそのつづりをなおすのかを1文書く。つづりミスという名前は書かない。";
 
 test("includes topic section when topic text is provided", () => {
   const prompt = buildCheckPrompt("Sample text.", "My hobby");
@@ -44,6 +42,10 @@ test("asks the model to flag each surface rule on its own line", () => {
     SYSTEM_MESSAGE.includes("文章のいちばん最後に . ? ! が無ければ、綴りとして指摘する。"),
     false
   );
+  assert.equal(
+    SYSTEM_MESSAGE.includes("つづりの explanation は、なぜそのつづりをなおすのかを1文書く。"),
+    false
+  );
   assert.ok(SYSTEM_MESSAGE.includes(OTHER_PUNCT_LINE));
-  assert.ok(SYSTEM_MESSAGE.includes(SPELLING_EXPLANATION_LINE));
+  assert.ok(SYSTEM_MESSAGE.includes("文法と単語の explanation は1文。"));
 });

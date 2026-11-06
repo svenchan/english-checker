@@ -1,5 +1,6 @@
 import { scoreFromMistakes } from "./score.js";
-import { findServerMistakes } from "./surfaceRules.js";
+import { catalogEntry } from "./mistakeCatalog.js";
+import { findServerMistakes, spellingExplanation } from "./surfaceRules.js";
 
 /**
  * Add server-owned mistakes and drop a model mistake only when its edit
@@ -43,12 +44,15 @@ export function applyFeedbackPolicy(text, feedback) {
     }
 
     if (overlapping.length > 0) {
-      for (const { index } of overlapping) {
+      for (const { index, server } of overlapping) {
+        if (server.code === "missing_end_punct") {
+          continue;
+        }
         suppressed.add(index);
       }
     }
 
-    keptModel.push(span ? { ...mistake, start: span.start, end: span.end } : mistake);
+    keptModel.push(withSpellingExplanation(mistake, span));
   }
 
   const mistakes = [
@@ -60,6 +64,21 @@ export function applyFeedbackPolicy(text, feedback) {
     ...base,
     mistakes,
     overallScore: scoreFromMistakes(mistakes)
+  };
+}
+
+function withSpellingExplanation(mistake, span) {
+  const placed = span ? { ...mistake, start: span.start, end: span.end } : { ...mistake };
+  if (placed.type !== "spelling" || placed.code === "first_person_i") {
+    return placed;
+  }
+
+  const entry = catalogEntry("spelling");
+  return {
+    ...placed,
+    code: "spelling",
+    type: entry.type,
+    explanation: spellingExplanation(placed.original || "", placed.corrected || "")
   };
 }
 

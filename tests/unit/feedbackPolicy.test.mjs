@@ -134,9 +134,15 @@ test("applyFeedbackPolicy keeps a wider rewrite that also capitalizes", () => {
       }
     ]
   });
-  assert.equal(feedback.mistakes.length, 1);
-  assert.equal(feedback.mistakes[0].explanation, "友達は複数だよ。");
-  assert.equal(feedback.overallScore, 90);
+  assert.deepEqual(
+    feedback.mistakes.map((mistake) => mistake.explanation),
+    [
+      "友達は複数だよ。",
+      "文の最後には . か ? か ! をつけます。kind → kind."
+    ]
+  );
+  assert.equal(feedback.mistakes.some((mistake) => mistake.code === "sentence_start_cap"), false);
+  assert.equal(feedback.overallScore, 85);
 });
 
 test("findServerMistakes flags only a missing final stop", () => {
@@ -169,6 +175,55 @@ test("applyFeedbackPolicy explains a missing final stop from the server", () => 
   assert.equal(feedback.overallScore, 95);
 });
 
+test("applyFeedbackPolicy replaces a model spelling explanation and keeps grammar", () => {
+  const feedback = applyFeedbackPolicy("I like my freind. She like cats.", {
+    mistakes: [
+      {
+        original: "freind",
+        corrected: "friend",
+        explanation: "つづりをよく見てね。",
+        type: "spelling"
+      },
+      {
+        original: "like",
+        corrected: "likes",
+        explanation: "She は1人だから、動詞 like には s をつけて likes にするよ。",
+        type: "grammar"
+      }
+    ]
+  });
+  const spelling = feedback.mistakes.find((mistake) => mistake.original === "freind");
+  const grammar = feedback.mistakes.find((mistake) => mistake.original === "like");
+  assert.equal(spelling.explanation, "つづりが間違っています。freind → friend");
+  assert.equal(spelling.code, "spelling");
+  assert.equal(spelling.type, "spelling");
+  assert.equal(spelling.corrected, "friend");
+  assert.equal(grammar.explanation, "She は1人だから、動詞 like には s をつけて likes にするよ。");
+  assert.equal(grammar.code, undefined);
+  assert.equal(feedback.overallScore, 85);
+});
+
+test("applyFeedbackPolicy keeps a spelling fix and a missing final stop on the same word", () => {
+  const feedback = applyFeedbackPolicy("I like my freind", {
+    mistakes: [
+      {
+        original: "freind",
+        corrected: "friend",
+        explanation: "つづりをよく見てね。",
+        type: "spelling"
+      }
+    ]
+  });
+  assert.deepEqual(
+    feedback.mistakes.map((mistake) => mistake.explanation),
+    [
+      "文の最後には . か ? か ! をつけます。freind → freind.",
+      "つづりが間違っています。freind → friend"
+    ]
+  );
+  assert.equal(feedback.overallScore, 90);
+});
+
 test("applyFeedbackPolicy keeps a wider model rewrite and skips the server hit", () => {
   const feedback = applyFeedbackPolicy("i like cat", {
     mistakes: [
@@ -180,8 +235,13 @@ test("applyFeedbackPolicy keeps a wider model rewrite and skips the server hit",
       }
     ]
   });
-  assert.equal(feedback.mistakes.length, 1);
-  assert.equal(feedback.mistakes[0].explanation, "猫は複数だよ。");
-  assert.equal(feedback.mistakes[0].code, undefined);
-  assert.equal(feedback.overallScore, 90);
+  assert.deepEqual(
+    feedback.mistakes.map((mistake) => mistake.explanation),
+    [
+      "猫は複数だよ。",
+      "文の最後には . か ? か ! をつけます。cat → cat."
+    ]
+  );
+  assert.equal(feedback.mistakes.some((mistake) => mistake.code === "first_person_i"), false);
+  assert.equal(feedback.overallScore, 85);
 });
