@@ -5,8 +5,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useChecker } from "../features/writing-checker/hooks/useChecker";
 import { Header } from "../features/writing-checker/components/Header";
 import { WritingInput } from "../features/writing-checker/components/WritingInput";
-import { FeedbackDisplay } from "../features/writing-checker/components/FeedbackDisplay";
-import { MistakeList } from "../features/writing-checker/components/MistakeList";
+import { CorrectionsPanel } from "../features/writing-checker/components/CorrectionsPanel";
 import { useMistakeHighlight } from "../features/writing-checker/hooks/useMistakeHighlight";
 import {
   createDefaultTopicState,
@@ -34,11 +33,18 @@ export default function Page() {
     startTimer,
     markSubmitted
   } = useTestSession(mode);
-  const feedbackSectionRef = useRef(null);
+  const surfaceRef = useRef(null);
 
   const mistakeHighlight = useMistakeHighlight(studentText, feedback?.mistakes);
-  const isTestLocked = mode === CHECKER_MODES.TEST && testSession && !testSession.submitted;
-  const shouldShowMistakeList = (feedback?.mistakes?.length || 0) > 0;
+  const focusMistakeInWriting = useCallback((mistakeId) => {
+    const root = surfaceRef.current;
+    if (!root || !mistakeId) return;
+    const escaped = typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(mistakeId)
+      : String(mistakeId).replace(/"/g, '\\"');
+    const target = root.querySelector(`[data-mistake-id="${escaped}"]`);
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
 
   const previousModeRef = useRef(mode);
   useEffect(() => {
@@ -66,15 +72,6 @@ export default function Page() {
       previousModeRef.current = mode;
     }
   }, [mode, reset]);
-
-  useEffect(() => {
-    if (feedback && feedbackSectionRef.current) {
-      feedbackSectionRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-    }
-  }, [feedback]);
 
   const handleModeChange = (nextMode) => {
     if (nextMode === mode) return;
@@ -146,53 +143,39 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex flex-col h-screen">
+    <div className="h-screen bg-sky-50">
+      <div className="flex h-full flex-col">
         <Header mode={mode} />
-        <div className="flex flex-1">
+        <div className="flex min-h-0 flex-1">
           <ModeSidebar activeMode={mode} onModeChange={handleModeChange} />
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="max-w-4xl mx-auto space-y-6">
-              <WritingInput
-                mode={mode}
-                testSession={mode === CHECKER_MODES.TEST ? testSession : null}
-                remainingMs={mode === CHECKER_MODES.TEST ? remainingMs : TEST_MODE.durationMs}
-                onTestSessionRestart={handleTestSessionRestart}
-                onTestTimerStart={startTimer}
-                text={studentText}
-                onChange={setStudentText}
-                onCheck={handleCheck}
-                isChecking={isChecking}
-                isDisabled={!!feedback}
-                feedback={feedback}
-                onReset={handleReset}
-                topic={topic}
-                onTopicChange={mode === CHECKER_MODES.PRACTICE ? setTopic : undefined}
-              />
-
-              {feedback && (
-                <>
-                  <div ref={feedbackSectionRef}>
-                    <FeedbackDisplay
-                      feedback={feedback}
-                      studentText={studentText}
-                      mistakeHighlight={mistakeHighlight}
-                      mode={mode}
-                      showCopyButton={!shouldShowMistakeList}
-                    />
-                  </div>
-                  {shouldShowMistakeList && (
-                    <MistakeList
-                      mistakes={feedback.mistakes}
-                      studentText={studentText}
-                      mistakeHighlight={mistakeHighlight}
-                      feedback={feedback}
-                      mode={mode}
-                    />
-                  )}
-                </>
-              )}
-            </div>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
+            <WritingInput
+              layout="split"
+              surfaceRef={surfaceRef}
+              mistakeHighlight={mistakeHighlight}
+              mode={mode}
+              testSession={mode === CHECKER_MODES.TEST ? testSession : null}
+              remainingMs={mode === CHECKER_MODES.TEST ? remainingMs : TEST_MODE.durationMs}
+              onTestSessionRestart={handleTestSessionRestart}
+              onTestTimerStart={startTimer}
+              text={studentText}
+              onChange={setStudentText}
+              onCheck={handleCheck}
+              isChecking={isChecking}
+              isDisabled={!!feedback}
+              feedback={feedback}
+              onReset={handleReset}
+              topic={topic}
+              onTopicChange={mode === CHECKER_MODES.PRACTICE ? setTopic : undefined}
+            />
+            <CorrectionsPanel
+              feedback={feedback}
+              studentText={studentText}
+              mistakeHighlight={mistakeHighlight}
+              mode={mode}
+              isChecking={isChecking}
+              onSelectMistake={focusMistakeInWriting}
+            />
           </div>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { countEffectiveWords } from "@/lib/wordCount";
 import { COOLDOWN_SECONDS, MAX_CHAR_COUNT } from "../constants";
 import { TopicPicker } from "./TopicPicker";
 import { setTopicEnabled } from "../lib/topicState";
+import { HighlightedText } from "./HighlightedText";
 
 export function WritingInput({
   mode = CHECKER_MODES.PRACTICE,
@@ -26,7 +27,10 @@ export function WritingInput({
   topic,
   onTopicChange,
   readOnly = false,
-  displayTopicText = null
+  displayTopicText = null,
+  layout = "card",
+  mistakeHighlight = null,
+  surfaceRef = null
 }) {
   const [cooldown, setCooldown] = useState(0);
   const [inputWarning, setInputWarning] = useState("");
@@ -134,6 +138,199 @@ export function WritingInput({
           readOnly
           className={`w-full h-48 p-4 border border-gray-300 rounded-lg resize-none bg-gray-50 cursor-default focus:outline-none ${textareaFocusClasses}`}
         />
+      </div>
+    );
+  }
+
+  if (layout === "split") {
+    const showReviewedText = Boolean(feedback);
+    const reviewTokens = mistakeHighlight?.tokens;
+    const footerBorder = isTestMode ? "border-red-100 bg-red-50/40" : "border-sky-100 bg-sky-50/70";
+    const countChipClass = isTestMode
+      ? "border-red-200 text-red-800"
+      : "border-sky-200 text-sky-800";
+
+    return (
+      <div className="flex min-h-0 flex-1 flex-col bg-white">
+        <div className="shrink-0 px-6 pt-4 md:max-h-[40%] md:overflow-y-auto">
+          {!isTestMode && !topic?.enabled && typeof onTopicChange === "function" && (
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={() => onTopicChange((prev) => setTopicEnabled(prev, true))}
+                disabled={isChecking || isDisabled}
+                className="inline-flex items-center rounded-md border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                テーマを追加
+              </button>
+            </div>
+          )}
+
+          {isTestMode && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-red-700">お題</p>
+                  {hasTestStarted ? (
+                    <p
+                      className={`mt-1 whitespace-pre-wrap break-words text-base font-semibold text-gray-900 transition-all duration-300 ease-out ${
+                        topicRevealActive ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+                      }`}
+                    >
+                      {testSession?.topic || "トピックを読み込み中..."}
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-base font-semibold italic text-gray-400">
+                      「開始」を押すとお題が表示されます
+                    </p>
+                  )}
+                </div>
+                <div className="flex min-w-[110px] max-w-[110px] flex-col items-stretch justify-center gap-2 self-center">
+                  <div
+                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
+                      testSession?.submitted
+                        ? "bg-green-100 text-green-700"
+                        : hasTestStarted
+                          ? "bg-red-100 text-red-700"
+                          : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    <Icons.Clock className="h-4 w-4" />
+                    <span>{formattedTimer}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onTestTimerStart?.()}
+                    disabled={timerButtonDisabled}
+                    className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                      timerButtonDisabled
+                        ? "cursor-not-allowed border-gray-200 bg-white text-gray-400"
+                        : "border-red-200 bg-white text-red-700 hover:bg-red-100"
+                    }`}
+                  >
+                    開始
+                  </button>
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-red-700">
+                {testSession?.submitted
+                  ? "提出済みです。「新しく書く」で次のテストに進めます。"
+                  : hasTestStarted
+                    ? "5分以内に仕上げてください。時間になると自動で提出されます。"
+                    : "「開始」を押すと5分カウントが始まり、お題が表示されます。"}
+              </p>
+            </div>
+          )}
+
+          {!isTestMode && typeof onTopicChange === "function" && (
+            <TopicPicker value={topic} onChange={onTopicChange} />
+          )}
+        </div>
+
+        <div ref={surfaceRef} className="min-h-[6rem] min-w-0 flex-1 overflow-hidden">
+          {showReviewedText ? (
+            <div className="h-full overflow-y-auto whitespace-pre-wrap break-words px-8 py-8 text-lg leading-8 text-slate-900">
+              {reviewTokens && reviewTokens.length > 0 ? (
+                <HighlightedText
+                  tokens={reviewTokens}
+                  activeMistakeId={mistakeHighlight?.selectedMistakeId}
+                  onMistakeClick={mistakeHighlight?.handleHighlightClick}
+                  appearance="underline"
+                  activeTone={isTestMode ? "red" : "blue"}
+                />
+              ) : (
+                <span>{text}</span>
+              )}
+            </div>
+          ) : (
+            <textarea
+              value={text}
+              onChange={(e) => handleTextChange(e.target.value)}
+              placeholder="例: I go to school yesterday. ここに英文を入力してください..."
+              className="h-full w-full resize-none overflow-y-auto border-0 bg-transparent px-8 py-8 text-lg leading-8 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 disabled:opacity-60"
+              disabled={isChecking || isDisabled}
+            />
+          )}
+        </div>
+
+        {inputWarning && (
+          <p className="shrink-0 px-6 pb-2 text-sm text-amber-600" role="alert">
+            {inputWarning}
+          </p>
+        )}
+
+        <div className={`relative flex shrink-0 flex-wrap items-center justify-between gap-3 border-t px-4 py-3 ${footerBorder}`}>
+          <span className={`rounded-full border bg-white px-3 py-1.5 text-sm font-medium shadow-sm ${countChipClass}`}>
+            {wordCount}語 · {text.length}/400
+          </span>
+
+          {!isTestMode && showHint && (
+            <div className="absolute bottom-full right-4 z-20 mb-3 max-h-48 w-[min(320px,calc(100%-2rem))] overflow-y-auto rounded-lg border border-sky-200 bg-white p-4 text-sm shadow-lg md:max-h-none">
+              <p className="font-semibold text-gray-900">英作文のヒント：構成を意識しよう</p>
+              <p className="mt-2 text-gray-800">
+                よい英作文は、文法が正しいだけでなく、文と文がつながっていることが大切です。文の流れを意識すると、読みやすくなります。
+              </p>
+              <p className="mt-2 text-gray-800">そのときに役立つのが PREP です。</p>
+              <p className="mt-2 text-gray-800">
+                P（主張）：何について書くかをはっきり言う
+                <br />
+                R（理由）：なぜそう思うかを書く
+                <br />
+                E（具体例）：例や自分の経験を書く
+                <br />
+                P（まとめ）：もう一度主張をまとめる
+              </p>
+              <p className="mt-2 text-gray-800">
+                いつも使う必要はありませんが、考えを分かりやすく伝えたいときにとても便利です。
+              </p>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            {!isTestMode && (
+              <button
+                type="button"
+                onClick={() => setShowHint((prev) => !prev)}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-sky-200 bg-white text-sky-700 hover:bg-sky-100"
+                aria-pressed={showHint}
+                aria-label="英作文のヒントを表示"
+              >
+                <Icons.Info className="h-5 w-5" />
+                <span className="sr-only">ヒントを見る</span>
+              </button>
+            )}
+
+            <button
+              onClick={handlePrimaryClick}
+              disabled={submitDisabled}
+              className={`flex items-center space-x-2 rounded-lg px-6 py-3 font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${primaryButtonClasses}`}
+            >
+              {isChecking ? (
+                <>
+                  <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
+                  <span>チェック中...</span>
+                </>
+              ) : feedback ? (
+                cooldown > 0 ? (
+                  <>
+                    <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
+                    <span>新しく書くまで {cooldown}s</span>
+                  </>
+                ) : (
+                  <>
+                    <Icons.RefreshCw className="h-5 w-5" />
+                    <span>新しく書く</span>
+                  </>
+                )
+              ) : (
+                <>
+                  <Icons.Send className="h-5 w-5" />
+                  <span>{isTestMode ? "提出する" : "チェックする"}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
