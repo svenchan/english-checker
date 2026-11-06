@@ -3,8 +3,6 @@ import assert from "node:assert/strict";
 
 const { SYSTEM_MESSAGE, buildCheckPrompt } = await import("../../src/config/prompts.js");
 
-const MISSING_END_LINE =
-  "文章のいちばん最後に . ? ! が無ければ、綴りとして指摘する。最後以外の文に終わりの記号が無くても指摘しない。";
 const OTHER_PUNCT_LINE = ", や . の前の空白など、それ以外の句読点も綴りとして指摘する。";
 const SPELLING_EXPLANATION_LINE =
   "つづりの explanation は、なぜそのつづりをなおすのかを1文書く。つづりミスという名前は書かない。";
@@ -42,7 +40,10 @@ test("asks the model to flag each surface rule on its own line", () => {
     SYSTEM_MESSAGE.includes("文の最初が小文字なら、綴りとして指摘する。"),
     false
   );
-  assert.ok(SYSTEM_MESSAGE.includes(MISSING_END_LINE));
+  assert.equal(
+    SYSTEM_MESSAGE.includes("文章のいちばん最後に . ? ! が無ければ、綴りとして指摘する。"),
+    false
+  );
   assert.ok(SYSTEM_MESSAGE.includes(OTHER_PUNCT_LINE));
   assert.ok(SYSTEM_MESSAGE.includes(SPELLING_EXPLANATION_LINE));
 });

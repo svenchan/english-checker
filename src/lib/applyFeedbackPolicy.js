@@ -64,7 +64,7 @@ export function applyFeedbackPolicy(text, feedback) {
 }
 
 function isExactServerEdit(original, span, overlapping, corrected) {
-  if (!original || !corrected || original === corrected) {
+  if (!original || !corrected || original === corrected || overlapping.length === 0) {
     return false;
   }
   if (!span) {
@@ -72,21 +72,66 @@ function isExactServerEdit(original, span, overlapping, corrected) {
       && overlapping[0].original === original
       && overlapping[0].corrected === corrected;
   }
-
-  const ordered = [...overlapping].sort((a, b) => b.start - a.start);
-  let result = original;
-  for (const mistake of ordered) {
-    const localStart = mistake.start - span.start;
-    const localEnd = mistake.end - span.start;
-    if (localStart < 0 || localEnd > result.length) {
-      return false;
-    }
-    if (result.slice(localStart, localEnd) !== mistake.original) {
-      return false;
-    }
-    result = result.slice(0, localStart) + mistake.corrected + result.slice(localEnd);
+  if (applyFixes(original, span, overlapping) === corrected) {
+    return true;
   }
-  return result === corrected;
+  return overlapping.some((mistake) => applyFixes(original, span, [mistake]) === corrected);
+}
+
+function applyFixes(original, span, mistakes) {
+  const inPlace = mistakes
+    .filter((mistake) => mistake.code !== "missing_end_punct")
+    .sort((a, b) => b.start - a.start);
+  const endPunct = mistakes.filter((mistake) => mistake.code === "missing_end_punct");
+  if (endPunct.length > 1) {
+    return null;
+  }
+
+  let result = original;
+  for (const mistake of inPlace) {
+    result = replaceSlice(result, span, mistake, false);
+    if (result == null) {
+      return null;
+    }
+  }
+  if (endPunct.length === 1) {
+    result = replaceSlice(result, span, endPunct[0], true);
+  }
+  return result;
+}
+
+function replaceSlice(result, span, mistake, ignoreCase) {
+  const localStart = mistake.start - span.start;
+  const localEnd = mistake.end - span.start;
+  if (localStart < 0 || localEnd > result.length) {
+    return null;
+  }
+
+  const current = result.slice(localStart, localEnd);
+  const matches = ignoreCase
+    ? current.toLowerCase() === mistake.original.toLowerCase()
+    : current === mistake.original;
+  if (!matches) {
+    return null;
+  }
+
+  const replacement = ignoreCase ? preserveCase(current, mistake.corrected) : mistake.corrected;
+  return result.slice(0, localStart) + replacement + result.slice(localEnd);
+}
+
+function preserveCase(current, corrected) {
+  let sourceIndex = 0;
+  let result = "";
+  for (const char of corrected) {
+    const source = current[sourceIndex];
+    if (source && source.toLowerCase() === char.toLowerCase()) {
+      result += source;
+      sourceIndex += 1;
+    } else {
+      result += char;
+    }
+  }
+  return result;
 }
 
 function findNextUnusedSpan(text, needle, usedSpans) {

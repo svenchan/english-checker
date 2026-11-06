@@ -74,13 +74,16 @@ test("findServerMistakes capitalizes real sentence starts and skips titles", () 
   );
   assert.equal(mistakes[1].type, "capitalization");
   assert.equal(mistakes[1].explanation, "文のはじめは大文字にします。she → She");
-  assert.equal(findServerMistakes("I met Mr. tanaka yesterday").length, 0);
+  const titled = findServerMistakes("I met Mr. tanaka yesterday");
+  assert.deepEqual(titled.map((mistake) => [mistake.original, mistake.code]), [
+    ["yesterday", "missing_end_punct"]
+  ]);
   assert.equal(findServerMistakes("I like the U.S. army and i.e. this.").length, 0);
-  assert.equal(findServerMistakes("3. she has a cat").length, 0);
+  assert.equal(findServerMistakes("3. she has a cat.").length, 0);
 });
 
 test("findServerMistakes keeps a leading i as spelling only", () => {
-  const mistakes = findServerMistakes("i like cats. she is kind");
+  const mistakes = findServerMistakes("i like cats. she is kind.");
   assert.deepEqual(
     mistakes.map((mistake) => [mistake.original, mistake.code]),
     [
@@ -105,7 +108,7 @@ test("applyFeedbackPolicy explains sentence starts from the server", () => {
 });
 
 test("applyFeedbackPolicy drops a model mistake that only capitalizes a sentence start", () => {
-  const feedback = applyFeedbackPolicy("I like cats. she is kind", {
+  const feedback = applyFeedbackPolicy("I like cats. she is kind.", {
     mistakes: [
       {
         original: "she",
@@ -134,6 +137,36 @@ test("applyFeedbackPolicy keeps a wider rewrite that also capitalizes", () => {
   assert.equal(feedback.mistakes.length, 1);
   assert.equal(feedback.mistakes[0].explanation, "友達は複数だよ。");
   assert.equal(feedback.overallScore, 90);
+});
+
+test("findServerMistakes flags only a missing final stop", () => {
+  const missing = findServerMistakes("My friend is kind");
+  assert.deepEqual(
+    missing.map((mistake) => [mistake.original, mistake.corrected, mistake.code, mistake.type]),
+    [["kind", "kind.", "missing_end_punct", "punctuation"]]
+  );
+  assert.equal(missing[0].explanation, "文の最後には . か ? か ! をつけます。kind → kind.");
+  assert.equal(findServerMistakes("I met Mr. Tanaka.").length, 0);
+  assert.equal(findServerMistakes("She is kind.").length, 0);
+  assert.equal(findServerMistakes("Is she kind?").length, 0);
+  assert.equal(findServerMistakes('She said "hello."').length, 0);
+  assert.equal(findServerMistakes("I like cats she is kind").filter((mistake) => mistake.code === "missing_end_punct").length, 1);
+});
+
+test("applyFeedbackPolicy explains a missing final stop from the server", () => {
+  const feedback = applyFeedbackPolicy("My friend is kind", {
+    mistakes: [
+      {
+        original: "kind",
+        corrected: "kind.",
+        explanation: "モデルの説明",
+        type: "spelling"
+      }
+    ]
+  });
+  assert.equal(feedback.mistakes.length, 1);
+  assert.equal(feedback.mistakes[0].explanation, "文の最後には . か ? か ! をつけます。kind → kind.");
+  assert.equal(feedback.overallScore, 95);
 });
 
 test("applyFeedbackPolicy keeps a wider model rewrite and skips the server hit", () => {

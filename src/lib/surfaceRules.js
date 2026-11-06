@@ -2,6 +2,8 @@ import { catalogEntry } from "./mistakeCatalog.js";
 
 const FIRST_PERSON_CODE = "first_person_i";
 const SENTENCE_START_CODE = "sentence_start_cap";
+const MISSING_END_CODE = "missing_end_punct";
+const CLOSING_QUOTE = /["“”'’]/;
 const TITLE_ABBREVIATIONS = new Set(["mr", "mrs", "ms", "dr", "prof", "st", "jr", "sr"]);
 const SENTENCE_BOUNDARY = /([.!?])(["“”']*)(\s+)/g;
 const WORD_AT_START = /^[A-Za-z]+(?:['’][A-Za-z]+)*/;
@@ -96,8 +98,63 @@ export function findSentenceStartMistakes(text) {
   return mistakes;
 }
 
+export function missingEndExplanation(original, corrected) {
+  return `文の最後には . か ? か ! をつけます。${original} → ${corrected}`;
+}
+
+/**
+ * One mistake when the writing does not end in . ? or !.
+ * A closing quote is ignored, so kind." already counts as ended.
+ * @param {string} text
+ */
+export function findMissingEndPunctuation(text) {
+  if (typeof text !== "string") {
+    return [];
+  }
+
+  const trimmedLength = text.trimEnd().length;
+  if (trimmedLength === 0) {
+    return [];
+  }
+
+  let tokenStart = trimmedLength;
+  while (tokenStart > 0 && !/\s/.test(text[tokenStart - 1])) {
+    tokenStart -= 1;
+  }
+
+  let markEnd = trimmedLength;
+  while (markEnd > tokenStart && CLOSING_QUOTE.test(text[markEnd - 1])) {
+    markEnd -= 1;
+  }
+  if (markEnd === tokenStart) {
+    return [];
+  }
+
+  const body = text.slice(tokenStart, markEnd);
+  if (/[.!?]$/.test(body)) {
+    return [];
+  }
+
+  let coreEnd = body.length;
+  while (coreEnd > 0 && !/[A-Za-z'’]/.test(body[coreEnd - 1])) {
+    coreEnd -= 1;
+  }
+  const corrected = coreEnd > 0 ? `${body.slice(0, coreEnd)}.` : `${body}.`;
+  const entry = catalogEntry(MISSING_END_CODE);
+  return [{
+    code: MISSING_END_CODE,
+    type: entry.type,
+    original: body,
+    corrected,
+    explanation: missingEndExplanation(body, corrected),
+    start: tokenStart,
+    end: markEnd
+  }];
+}
+
 /**
  * First-person mistakes win when a sentence starts with i, i'm, i'll, i've, or i'd.
+ * The final stop is separate and can share a word with another rule.
  * @param {string} text
  */
 export function findServerMistakes(text) {
@@ -106,7 +163,8 @@ export function findServerMistakes(text) {
     return !firstPerson.some((claimed) => rangesOverlap(claimed, mistake));
   });
 
-  return [...firstPerson, ...sentenceStarts].sort((a, b) => a.start - b.start);
+  return [...firstPerson, ...sentenceStarts, ...findMissingEndPunctuation(text)]
+    .sort((a, b) => a.start - b.start);
 }
 
 function indexAfterOpening(text) {
