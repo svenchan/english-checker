@@ -11,7 +11,7 @@ The app is a Next.js 14 App Router project, deployed on Vercel. Checks, teacher 
 3. Test writing under 15 words skips the model. It is saved as `too_short` and shown as unscored.
 4. Otherwise the guest cookie `wc_session_id` is limited to one model check every 60 seconds. Requests then pass through an in-memory queue with a 300 ms gap.
 5. Groq (`openai/gpt-oss-20b`, key `GROQ_API_KEY_11`) returns mistakes. When a topic is present and the writing has at least 25 words and 3 sentences, it also returns PREP topic feedback (point, reason, evidence, summary).
-6. The server scores the result from the mistake list: start at 100, subtract 5 per spelling mistake and 10 per grammar or vocabulary mistake, and clamp to 0–100. The PREP checklist does not change the score.
+6. The server scores the result from the mistake list, starting at 100 and clamping to 0–100. A mistake with a known code uses that code's weight: spelling, first-person `i`, sentence-start capitalization, and a missing final stop cost 5; grammar and vocabulary cost 10. A mistake with no code keeps the previous rule: spelling costs 5 and every other type costs 10. The PREP checklist does not change the score.
 7. The check is inserted into `checks` and returned as `{ submissionId, feedback }`.
 
 Practice mode keeps the topic optional. Test mode assigns a topic, runs a 5-minute timer in the browser, and submits automatically when time runs out.
