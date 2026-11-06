@@ -1,5 +1,5 @@
 import { scoreFromMistakes } from "./score.js";
-import { findFirstPersonMistakes } from "./surfaceRules.js";
+import { findServerMistakes } from "./surfaceRules.js";
 
 /**
  * Add server-owned mistakes and drop a model mistake only when its edit
@@ -12,7 +12,7 @@ export function applyFeedbackPolicy(text, feedback) {
   const source = typeof text === "string" ? text : "";
   const base = feedback && typeof feedback === "object" ? feedback : {};
   const modelMistakes = Array.isArray(base.mistakes) ? base.mistakes : [];
-  const serverMistakes = findFirstPersonMistakes(source);
+  const serverMistakes = findServerMistakes(source);
   const suppressed = new Set();
   const usedSpans = [];
   const keptModel = [];
@@ -37,7 +37,8 @@ export function applyFeedbackPolicy(text, feedback) {
         return !span && server.original === original;
       });
 
-    if (overlapping.length > 0 && isExactFirstPersonEdit(original, corrected)) {
+    const overlappingMistakes = overlapping.map(({ server }) => server);
+    if (overlapping.length > 0 && isExactServerEdit(original, span, overlappingMistakes, corrected)) {
       continue;
     }
 
@@ -62,21 +63,30 @@ export function applyFeedbackPolicy(text, feedback) {
   };
 }
 
-function isExactFirstPersonEdit(original, corrected) {
+function isExactServerEdit(original, span, overlapping, corrected) {
   if (!original || !corrected || original === corrected) {
     return false;
   }
-  return applyFirstPersonFixes(original) === corrected;
-}
-
-function applyFirstPersonFixes(value) {
-  const mistakes = findFirstPersonMistakes(value);
-  let result = value;
-  for (let index = mistakes.length - 1; index >= 0; index -= 1) {
-    const mistake = mistakes[index];
-    result = result.slice(0, mistake.start) + mistake.corrected + result.slice(mistake.end);
+  if (!span) {
+    return overlapping.length === 1
+      && overlapping[0].original === original
+      && overlapping[0].corrected === corrected;
   }
-  return result;
+
+  const ordered = [...overlapping].sort((a, b) => b.start - a.start);
+  let result = original;
+  for (const mistake of ordered) {
+    const localStart = mistake.start - span.start;
+    const localEnd = mistake.end - span.start;
+    if (localStart < 0 || localEnd > result.length) {
+      return false;
+    }
+    if (result.slice(localStart, localEnd) !== mistake.original) {
+      return false;
+    }
+    result = result.slice(0, localStart) + mistake.corrected + result.slice(localEnd);
+  }
+  return result === corrected;
 }
 
 function findNextUnusedSpan(text, needle, usedSpans) {
