@@ -9,17 +9,17 @@ function generateSampleText(length = 600) {
   return Array.from({ length }, (_, idx) => String.fromCharCode(65 + (idx % 26))).join("");
 }
 
-test("buildCheckPrompt truncates input to 500 characters", () => {
+test("buildCheckPrompt truncates input to 400 characters", () => {
   const input = generateSampleText(600);
   const prompt = buildCheckPrompt(input);
-  const truncated = input.slice(0, 500);
+  const truncated = input.slice(0, 400);
 
-  const match = prompt.match(/生徒の英文: "([^"]+)/);
-  assert.ok(match, "Prompt should contain the student text line");
+  const match = prompt.match(/<student_text>\n([\s\S]*)\n<\/student_text>/);
+  assert.ok(match, "Prompt should contain the student text wrapper");
   assert.equal(
     match[1],
     truncated,
-    "Prompt should embed only the first 500 characters"
+    "Prompt should embed only the first 400 characters"
   );
 });
 
