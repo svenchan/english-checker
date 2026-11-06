@@ -4,11 +4,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { sanitizeClientInput } from "@/lib/clientSanitize";
 import { Icons } from "@/shared/components/ui/Icons";
+import { Tooltip } from "@/shared/components/ui/Tooltip";
 import { CHECKER_MODES, TEST_MODE } from "@/config/testMode";
 import { countEffectiveWords } from "@/lib/wordCount";
 import { COOLDOWN_SECONDS, MAX_CHAR_COUNT } from "../constants";
 import { TopicPicker } from "./TopicPicker";
-import { setTopicEnabled } from "../lib/topicState";
+import { deriveTopicText, removeTopicState, setTopicEnabled } from "../lib/topicState";
 import { HighlightedText } from "./HighlightedText";
 
 export function WritingInput({
@@ -148,10 +149,11 @@ export function WritingInput({
     const countChipClass = isTestMode
       ? "border-red-200 text-red-800"
       : "border-sky-200 text-sky-800";
+    const practiceTopicText = !isTestMode ? deriveTopicText(topic) : null;
 
     return (
       <div className="flex min-h-0 flex-1 flex-col bg-white">
-        {!isTestMode && typeof onTopicChange === "function" && (
+        {!isTestMode && typeof onTopicChange === "function" && !practiceTopicText && (
           <div className="shrink-0 px-6 pt-4 md:max-h-[40%] md:overflow-y-auto">
             {!topic?.enabled && (
               <div className="mb-3">
@@ -169,16 +171,24 @@ export function WritingInput({
           </div>
         )}
 
-        {isTestMode && hasTestStarted && (
+        {(isTestMode ? hasTestStarted : Boolean(practiceTopicText)) && (
           <div className="shrink-0 px-8 pt-6 md:max-h-[40%] md:overflow-y-auto">
             <p className="text-xs font-medium uppercase tracking-wider text-slate-500">お題</p>
-            <p
-              className={`mt-1 whitespace-pre-wrap break-words text-base font-semibold text-slate-900 transition-all duration-300 ease-out ${
-                topicRevealActive ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+            <div
+              className={`mt-1 flex items-start justify-between gap-3 transition-all duration-300 ease-out ${
+                isTestMode && !topicRevealActive ? "-translate-y-2 opacity-0" : "translate-y-0 opacity-100"
               }`}
             >
-              {testSession?.topic || "トピックを読み込み中..."}
-            </p>
+              <p className="whitespace-pre-wrap break-words text-base font-semibold text-slate-900">
+                {isTestMode ? testSession?.topic || "トピックを読み込み中..." : practiceTopicText}
+              </p>
+              {!isTestMode && typeof onTopicChange === "function" && (
+                <TopicDeleteButton
+                  disabled={isChecking || isDisabled}
+                  onClick={() => onTopicChange(removeTopicState())}
+                />
+              )}
+            </div>
           </div>
         )}
 
@@ -216,7 +226,7 @@ export function WritingInput({
             <textarea
               value={text}
               onChange={(e) => handleTextChange(e.target.value)}
-              placeholder="例: I go to school yesterday. ここに英文を入力してください..."
+              placeholder="例: This is my friend... ここに英文を入力してください..."
               className="h-full w-full resize-none overflow-y-auto border-0 bg-transparent px-8 py-8 text-lg leading-8 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 disabled:opacity-60"
               disabled={isChecking || isDisabled}
             />
@@ -384,14 +394,31 @@ export function WritingInput({
         </div>
       )}
 
-      {!isTestMode && typeof onTopicChange === "function" && (
+      {!isTestMode && deriveTopicText(topic) && (
+        <div className="mb-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">お題</p>
+          <div className="mt-1 flex items-start justify-between gap-3">
+            <p className="whitespace-pre-wrap break-words text-base font-semibold text-slate-900">
+              {deriveTopicText(topic)}
+            </p>
+            {typeof onTopicChange === "function" && (
+              <TopicDeleteButton
+                disabled={isChecking || isDisabled}
+                onClick={() => onTopicChange(removeTopicState())}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {!isTestMode && !deriveTopicText(topic) && typeof onTopicChange === "function" && (
         <TopicPicker value={topic} onChange={onTopicChange} />
       )}
 
       <textarea
         value={text}
         onChange={(e) => handleTextChange(e.target.value)}
-        placeholder="例: I go to school yesterday. ここに英文を入力してください..."
+        placeholder="例: This is my friend... ここに英文を入力してください..."
         className={`w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 ${textareaFocusClasses} resize-none`}
         disabled={isChecking || isDisabled}
       />
@@ -469,6 +496,22 @@ export function WritingInput({
         </button>
       </div>
     </div>
+  );
+}
+
+function TopicDeleteButton({ onClick, disabled }) {
+  return (
+    <Tooltip content="テーマを削除" position="top-right">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label="テーマを削除"
+        className="mt-0.5 shrink-0 border-0 bg-transparent p-0 text-red-600 hover:text-red-800 disabled:cursor-not-allowed disabled:text-gray-300"
+      >
+        <Icons.Trash className="h-4 w-4" />
+      </button>
+    </Tooltip>
   );
 }
 

@@ -1,10 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { TOPIC_PRESET_GROUPS } from "@/config/topicPresets";
 import { Icons } from "@/shared/components/ui/Icons";
 import { Tooltip } from "@/shared/components/ui/Tooltip";
 import {
-  clearTopicState,
   createDefaultTopicState,
   removeTopicState,
   setTopicFromFreeText,
@@ -14,20 +14,25 @@ import {
 
 export function TopicPicker({ value, onChange, presetGroups = TOPIC_PRESET_GROUPS }) {
   const topic = value ?? createDefaultTopicState();
+  const [draft, setDraft] = useState(topic.source === TOPIC_SOURCES.FREE ? topic.value : "");
+
   if (!topic.enabled) {
     return null;
   }
-
-  const freeTextValue = topic.source === TOPIC_SOURCES.FREE ? topic.value : "";
   const presetValue = topic.source === TOPIC_SOURCES.PRESET ? topic.value : "";
   const isFreeDisabled = topic.source === TOPIC_SOURCES.PRESET;
-  const isPresetDisabled = topic.source === TOPIC_SOURCES.FREE;
-  const canClearFreeText = !!freeTextValue;
+  const isPresetDisabled = draft.trim().length > 0;
+  const canSubmit = draft.trim().length > 0 && !isFreeDisabled;
 
   const emitChange = (nextState) => {
     if (typeof onChange === "function") {
       onChange(nextState);
     }
+  };
+
+  const submitDraft = () => {
+    if (!canSubmit) return;
+    emitChange(setTopicFromFreeText(topic, draft.trim()));
   };
 
   return (
@@ -46,47 +51,36 @@ export function TopicPicker({ value, onChange, presetGroups = TOPIC_PRESET_GROUP
           </button>
         </Tooltip>
       </div>
-      <p className="text-xs text-gray-500">
-        自由入力かリストからの選択、どちらか一方を使ってください。
-      </p>
-
       <div className="grid gap-4 md:grid-cols-2 items-start">
-        <div className="space-y-2 h-full">
-          <div className="flex items-center justify-between">
-            <label className="text-sm text-gray-700" htmlFor="topic-free-input">
-              自由入力
-            </label>
-            <button
-              type="button"
-              onClick={() => emitChange(clearTopicState())}
-              disabled={!canClearFreeText}
-              className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium transition-colors ${
-                canClearFreeText
-                  ? "border-blue-200 text-blue-600 hover:bg-blue-50 bg-white"
-                  : "border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed"
-              }`}
-            >
-              <Icons.RefreshCw className="mr-1 h-3.5 w-3.5" />
-              入力をクリア
-            </button>
-          </div>
+        <div className="relative h-full">
           <input
             id="topic-free-input"
             type="text"
-            value={freeTextValue}
+            value={draft}
             disabled={isFreeDisabled}
-            onChange={(event) =>
-              emitChange(setTopicFromFreeText(topic, event.target.value))
-            }
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                submitDraft();
+              }
+            }}
             placeholder="例: Recycling in my town"
-            className="w-full rounded-md border border-gray-300 px-3 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+            aria-label="自由入力"
+            className="w-full rounded-md border border-gray-300 py-3 pl-3 pr-10 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
           />
+          <button
+            type="button"
+            onClick={submitDraft}
+            disabled={!canSubmit}
+            aria-label="テーマを決定"
+            className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center border-0 bg-transparent p-0 text-sky-600 hover:text-sky-800 disabled:cursor-not-allowed disabled:text-gray-300"
+          >
+            <Icons.Check className="h-4 w-4" />
+          </button>
         </div>
 
-        <div className="space-y-1 h-full">
-          <label className="text-sm text-gray-700" htmlFor="topic-preset-select">
-            定型テーマ
-          </label>
+        <div className="h-full">
           <select
             id="topic-preset-select"
             value={presetValue}
@@ -94,6 +88,7 @@ export function TopicPicker({ value, onChange, presetGroups = TOPIC_PRESET_GROUP
             onChange={(event) =>
               emitChange(setTopicFromPreset(topic, event.target.value))
             }
+            aria-label="定型テーマ"
             className="w-full rounded-md border border-gray-300 px-3 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
           >
             <option value="">テーマを選択</option>
