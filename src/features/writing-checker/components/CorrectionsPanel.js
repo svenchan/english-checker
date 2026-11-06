@@ -66,10 +66,6 @@ export function CorrectionsPanel({
     getMistakeIdForIndex
   } = mistakeHighlight || {};
 
-  const shellClass = isTestMode
-    ? "border-red-100 bg-red-50"
-    : "border-sky-100 bg-sky-50";
-  const headerBorder = isTestMode ? "border-red-100" : "border-sky-100";
   const titleClass = isTestMode ? "text-red-800" : "text-sky-800";
   const mutedClass = isTestMode ? "text-red-700/80" : "text-sky-700/80";
   const selectedCardClasses = isTestMode ? "border-red-500 bg-red-50" : "border-sky-500 bg-sky-50";
@@ -158,16 +154,18 @@ export function CorrectionsPanel({
   return (
     <aside
       ref={panelRef}
-      className={`flex min-h-0 w-full flex-1 flex-col border-t md:w-[340px] md:flex-none md:border-l md:border-t-0 ${shellClass}`}
+      className="flex min-h-0 w-full flex-1 flex-col border-t border-slate-200 bg-white md:w-[340px] md:flex-none md:border-l md:border-t-0"
     >
-      <div className={`shrink-0 border-b px-4 py-4 ${headerBorder}`}>
-        <Link href="/" className="mb-4 flex items-center gap-2 text-black hover:text-slate-700">
+      <div className="shrink-0 px-4 py-4">
+        <Link
+          href="/"
+          className={`flex items-center gap-2 text-black hover:text-slate-700 ${feedback ? "mb-4" : ""}`}
+        >
           <Icons.BookOpen className="h-7 w-7 shrink-0 text-blue-600" />
           <span className="text-lg font-bold leading-tight">英作文チェッカー</span>
         </Link>
-        <div className="flex items-center justify-between gap-3">
-          <h2 className={`text-base font-semibold ${titleClass}`}>添削</h2>
-          {feedback && (
+        {feedback && (
+          <div className="flex justify-end">
             <Tooltip
               content={copySuccess ? "コピーしました！" : "フィードバックをコピー"}
               showDelay={100}
@@ -187,8 +185,8 @@ export function CorrectionsPanel({
                 <Icons.Copy className="h-4 w-4" />
               </button>
             </Tooltip>
-          )}
-        </div>
+          </div>
+        )}
 
         {feedback && (
           <div className="mt-3 flex items-center gap-3">

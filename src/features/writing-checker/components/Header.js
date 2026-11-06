@@ -17,8 +17,7 @@ const MODE_CONFIG = [
   },
   {
     id: CHECKER_MODES.TEST,
-    label: "テストモード",
-    description: "5分の本番シミュレーション",
+    label: "タイムアタック",
     icon: Icons.Clock
   }
 ];
@@ -137,7 +136,11 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
               return (
                 <Tooltip
                   key={modeOption.id}
-                  content={`${modeOption.label} — ${modeOption.description}`}
+                  content={
+                    modeOption.id === CHECKER_MODES.TEST
+                      ? modeOption.label
+                      : `${modeOption.label} — ${modeOption.description}`
+                  }
                   position="bottom"
                 >
                   <button
