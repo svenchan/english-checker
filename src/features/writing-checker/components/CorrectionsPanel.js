@@ -56,6 +56,7 @@ export function CorrectionsPanel({
   const isTestMode = mode === CHECKER_MODES.TEST;
   const panelRef = useRef(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const mistakes = feedback?.mistakes || [];
   const hasMistakes = mistakes.length > 0;
   const isTooShort = feedback?.status === "too_short";
@@ -157,15 +158,35 @@ export function CorrectionsPanel({
       className="flex min-h-0 w-full flex-1 flex-col border-t border-slate-200 bg-white md:w-[340px] md:flex-none md:border-l md:border-t-0"
     >
       <div className="shrink-0 px-4 py-4">
-        <Link
-          href="/"
-          className={`flex items-center gap-2 text-black hover:text-slate-700 ${feedback ? "mb-4" : ""}`}
-        >
-          <Icons.BookOpen className="h-7 w-7 shrink-0 text-blue-600" />
-          <span className="text-lg font-bold leading-tight">英作文チェッカー</span>
-        </Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link href="/" className="flex min-w-0 items-center gap-2 text-black hover:text-slate-700">
+            <Icons.BookOpen className="h-7 w-7 shrink-0 text-blue-600" />
+            <span className="text-lg font-bold leading-tight">英作文チェッカー</span>
+          </Link>
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowInfo((prev) => !prev)}
+              className="inline-flex h-8 w-8 items-center justify-center border-0 bg-transparent p-0 text-sky-600 hover:text-sky-800"
+              aria-pressed={showInfo}
+              aria-label="チェッカーの説明を表示"
+            >
+              <Icons.Info className="h-5 w-5" />
+            </button>
+            {showInfo && (
+              <div className="absolute right-0 top-full z-20 mt-2 w-[min(280px,calc(100vw-2rem))] rounded-lg border border-slate-200 bg-white p-4 text-sm shadow-lg">
+                <p className="text-slate-800">
+                  英作文をチェックして、つづり・単語・文法の間違いを伝えます。
+                </p>
+                <p className="mt-2 text-slate-600">
+                  このチェッカーはAIを使っています。間違えることがあります。
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
         {feedback && (
-          <div className="flex justify-end">
+          <div className="mt-4 flex justify-end">
             <Tooltip
               content={copySuccess ? "コピーしました！" : "フィードバックをコピー"}
               showDelay={100}
