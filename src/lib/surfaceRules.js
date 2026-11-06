@@ -22,7 +22,11 @@ const CORRECTIONS = {
 };
 
 export function spellingExplanation(original, corrected) {
-  return `つづりが間違っています。${original} → ${corrected}`;
+  return `つづりが間違っている。${original} → ${corrected}`;
+}
+
+export function firstPersonExplanation(original, corrected) {
+  return `私を表す"I"は大文字で書く。${original} → ${corrected}`;
 }
 
 function correctFirstPerson(token) {
@@ -57,7 +61,7 @@ export function findFirstPersonMistakes(text) {
       type: entry.type,
       original,
       corrected,
-      explanation: spellingExplanation(original, corrected),
+      explanation: firstPersonExplanation(original, corrected),
       start,
       end: start + original.length
     });
@@ -67,7 +71,7 @@ export function findFirstPersonMistakes(text) {
 }
 
 export function sentenceStartExplanation(original, corrected) {
-  return `文のはじめは大文字にします。${original} → ${corrected}`;
+  return `文のはじめは大文字にする。${original} → ${corrected}`;
 }
 
 /**
@@ -99,7 +103,7 @@ export function findSentenceStartMistakes(text) {
 }
 
 export function missingEndExplanation(original, corrected) {
-  return `文の最後には . か ? か ! をつけます。${original} → ${corrected}`;
+  return `文の最後には . か ? か ! をつける。${original} → ${corrected}`;
 }
 
 /**

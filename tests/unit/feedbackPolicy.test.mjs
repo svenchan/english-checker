@@ -18,7 +18,7 @@ test("findFirstPersonMistakes flags i and its contractions", () => {
   );
   assert.equal(mistakes[0].code, "first_person_i");
   assert.equal(mistakes[0].type, "spelling");
-  assert.equal(mistakes[1].explanation, "つづりが間違っています。i'm → I'm");
+  assert.equal(mistakes[1].explanation, "私を表す\"I\"は大文字で書く。i'm → I'm");
 });
 
 test("findFirstPersonMistakes accepts a curly apostrophe and a mixed-case tail", () => {
@@ -27,7 +27,7 @@ test("findFirstPersonMistakes accepts a curly apostrophe and a mixed-case tail",
     mistakes.map((mistake) => mistake.corrected),
     ["I'm", "I'll"]
   );
-  assert.equal(mistakes[0].explanation, "つづりが間違っています。i’m → I'm");
+  assert.equal(mistakes[0].explanation, "私を表す\"I\"は大文字で書く。i’m → I'm");
 });
 
 test("findFirstPersonMistakes ignores correct I and lookalike words", () => {
@@ -41,7 +41,7 @@ test("applyFeedbackPolicy explains a lone i'll from the server", () => {
   assert.equal(feedback.mistakes.length, 1);
   assert.equal(feedback.mistakes[0].original, "i'll");
   assert.equal(feedback.mistakes[0].corrected, "I'll");
-  assert.equal(feedback.mistakes[0].explanation, "つづりが間違っています。i'll → I'll");
+  assert.equal(feedback.mistakes[0].explanation, "私を表す\"I\"は大文字で書く。i'll → I'll");
   assert.equal(feedback.overallScore, 95);
   assert.equal(text.slice(feedback.mistakes[0].start, feedback.mistakes[0].end), "i'll");
 });
@@ -58,7 +58,7 @@ test("applyFeedbackPolicy drops a model mistake that only fixes first person", (
     ]
   });
   assert.equal(feedback.mistakes.length, 1);
-  assert.equal(feedback.mistakes[0].explanation, "つづりが間違っています。i'll → I'll");
+  assert.equal(feedback.mistakes[0].explanation, "私を表す\"I\"は大文字で書く。i'll → I'll");
   assert.equal(feedback.overallScore, 95);
 });
 
@@ -73,7 +73,7 @@ test("findServerMistakes capitalizes real sentence starts and skips titles", () 
     ]
   );
   assert.equal(mistakes[1].type, "capitalization");
-  assert.equal(mistakes[1].explanation, "文のはじめは大文字にします。she → She");
+  assert.equal(mistakes[1].explanation, "文のはじめは大文字にする。she → She");
   const titled = findServerMistakes("I met Mr. tanaka yesterday");
   assert.deepEqual(titled.map((mistake) => [mistake.original, mistake.code]), [
     ["yesterday", "missing_end_punct"]
@@ -100,8 +100,8 @@ test("applyFeedbackPolicy explains sentence starts from the server", () => {
   assert.deepEqual(
     feedback.mistakes.map((mistake) => mistake.explanation),
     [
-      "文のはじめは大文字にします。my → My",
-      "文のはじめは大文字にします。she → She"
+      "文のはじめは大文字にする。my → My",
+      "文のはじめは大文字にする。she → She"
     ]
   );
   assert.equal(feedback.overallScore, 90);
@@ -119,7 +119,7 @@ test("applyFeedbackPolicy drops a model mistake that only capitalizes a sentence
     ]
   });
   assert.equal(feedback.mistakes.length, 1);
-  assert.equal(feedback.mistakes[0].explanation, "文のはじめは大文字にします。she → She");
+  assert.equal(feedback.mistakes[0].explanation, "文のはじめは大文字にする。she → She");
   assert.equal(feedback.overallScore, 95);
 });
 
@@ -138,7 +138,7 @@ test("applyFeedbackPolicy keeps a wider rewrite that also capitalizes", () => {
     feedback.mistakes.map((mistake) => mistake.explanation),
     [
       "友達は複数だよ。",
-      "文の最後には . か ? か ! をつけます。kind → kind."
+      "文の最後には . か ? か ! をつける。kind → kind."
     ]
   );
   assert.equal(feedback.mistakes.some((mistake) => mistake.code === "sentence_start_cap"), false);
@@ -151,7 +151,7 @@ test("findServerMistakes flags only a missing final stop", () => {
     missing.map((mistake) => [mistake.original, mistake.corrected, mistake.code, mistake.type]),
     [["kind", "kind.", "missing_end_punct", "punctuation"]]
   );
-  assert.equal(missing[0].explanation, "文の最後には . か ? か ! をつけます。kind → kind.");
+  assert.equal(missing[0].explanation, "文の最後には . か ? か ! をつける。kind → kind.");
   assert.equal(findServerMistakes("I met Mr. Tanaka.").length, 0);
   assert.equal(findServerMistakes("She is kind.").length, 0);
   assert.equal(findServerMistakes("Is she kind?").length, 0);
@@ -171,7 +171,7 @@ test("applyFeedbackPolicy explains a missing final stop from the server", () => 
     ]
   });
   assert.equal(feedback.mistakes.length, 1);
-  assert.equal(feedback.mistakes[0].explanation, "文の最後には . か ? か ! をつけます。kind → kind.");
+  assert.equal(feedback.mistakes[0].explanation, "文の最後には . か ? か ! をつける。kind → kind.");
   assert.equal(feedback.overallScore, 95);
 });
 
@@ -194,7 +194,7 @@ test("applyFeedbackPolicy replaces a model spelling explanation and keeps gramma
   });
   const spelling = feedback.mistakes.find((mistake) => mistake.original === "freind");
   const grammar = feedback.mistakes.find((mistake) => mistake.original === "like");
-  assert.equal(spelling.explanation, "つづりが間違っています。freind → friend");
+  assert.equal(spelling.explanation, "つづりが間違っている。freind → friend");
   assert.equal(spelling.code, "spelling");
   assert.equal(spelling.type, "spelling");
   assert.equal(spelling.corrected, "friend");
@@ -217,8 +217,8 @@ test("applyFeedbackPolicy keeps a spelling fix and a missing final stop on the s
   assert.deepEqual(
     feedback.mistakes.map((mistake) => mistake.explanation),
     [
-      "文の最後には . か ? か ! をつけます。freind → freind.",
-      "つづりが間違っています。freind → friend"
+      "文の最後には . か ? か ! をつける。freind → freind.",
+      "つづりが間違っている。freind → friend"
     ]
   );
   assert.equal(feedback.overallScore, 90);
@@ -239,7 +239,7 @@ test("applyFeedbackPolicy keeps a wider model rewrite and skips the server hit",
     feedback.mistakes.map((mistake) => mistake.explanation),
     [
       "猫は複数だよ。",
-      "文の最後には . か ? か ! をつけます。cat → cat."
+      "文の最後には . か ? か ! をつける。cat → cat."
     ]
   );
   assert.equal(feedback.mistakes.some((mistake) => mistake.code === "first_person_i"), false);
