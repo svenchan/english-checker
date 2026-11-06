@@ -151,83 +151,54 @@ export function WritingInput({
 
     return (
       <div className="flex min-h-0 flex-1 flex-col bg-white">
-        <div className="shrink-0 px-6 pt-4 md:max-h-[40%] md:overflow-y-auto">
-          {!isTestMode && !topic?.enabled && typeof onTopicChange === "function" && (
-            <div className="mb-3">
-              <button
-                type="button"
-                onClick={() => onTopicChange((prev) => setTopicEnabled(prev, true))}
-                disabled={isChecking || isDisabled}
-                className="inline-flex items-center rounded-md border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                テーマを追加
-              </button>
-            </div>
-          )}
-
-          {isTestMode && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-red-700">お題</p>
-                  {hasTestStarted ? (
-                    <p
-                      className={`mt-1 whitespace-pre-wrap break-words text-base font-semibold text-gray-900 transition-all duration-300 ease-out ${
-                        topicRevealActive ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
-                      }`}
-                    >
-                      {testSession?.topic || "トピックを読み込み中..."}
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-base font-semibold italic text-gray-400">
-                      「開始」を押すとお題が表示されます
-                    </p>
-                  )}
-                </div>
-                <div className="flex min-w-[110px] max-w-[110px] flex-col items-stretch justify-center gap-2 self-center">
-                  <div
-                    className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${
-                      testSession?.submitted
-                        ? "bg-green-100 text-green-700"
-                        : hasTestStarted
-                          ? "bg-red-100 text-red-700"
-                          : "bg-gray-100 text-gray-600"
-                    }`}
-                  >
-                    <Icons.Clock className="h-4 w-4" />
-                    <span>{formattedTimer}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => onTestTimerStart?.()}
-                    disabled={timerButtonDisabled}
-                    className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
-                      timerButtonDisabled
-                        ? "cursor-not-allowed border-gray-200 bg-white text-gray-400"
-                        : "border-red-200 bg-white text-red-700 hover:bg-red-100"
-                    }`}
-                  >
-                    開始
-                  </button>
-                </div>
+        {!isTestMode && typeof onTopicChange === "function" && (
+          <div className="shrink-0 px-6 pt-4 md:max-h-[40%] md:overflow-y-auto">
+            {!topic?.enabled && (
+              <div className="mb-3">
+                <button
+                  type="button"
+                  onClick={() => onTopicChange((prev) => setTopicEnabled(prev, true))}
+                  disabled={isChecking || isDisabled}
+                  className="inline-flex items-center rounded-md border border-sky-200 px-3 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  テーマを追加
+                </button>
               </div>
-              <p className="mt-2 text-xs text-red-700">
-                {testSession?.submitted
-                  ? "提出済みです。「新しく書く」で次のテストに進めます。"
-                  : hasTestStarted
-                    ? "5分以内に仕上げてください。時間になると自動で提出されます。"
-                    : "「開始」を押すと5分カウントが始まり、お題が表示されます。"}
-              </p>
-            </div>
-          )}
-
-          {!isTestMode && typeof onTopicChange === "function" && (
+            )}
             <TopicPicker value={topic} onChange={onTopicChange} />
-          )}
-        </div>
+          </div>
+        )}
+
+        {isTestMode && hasTestStarted && (
+          <div className="shrink-0 px-8 pt-6 md:max-h-[40%] md:overflow-y-auto">
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">お題</p>
+            <p
+              className={`mt-1 whitespace-pre-wrap break-words text-base font-semibold text-slate-900 transition-all duration-300 ease-out ${
+                topicRevealActive ? "translate-y-0 opacity-100" : "-translate-y-2 opacity-0"
+              }`}
+            >
+              {testSession?.topic || "トピックを読み込み中..."}
+            </p>
+          </div>
+        )}
 
         <div ref={surfaceRef} className="min-h-[6rem] min-w-0 flex-1 overflow-hidden">
-          {showReviewedText ? (
+          {isTestMode && !hasTestStarted && !showReviewedText ? (
+            <div className="flex h-full items-center justify-center px-8">
+              <button
+                type="button"
+                onClick={() => onTestTimerStart?.()}
+                disabled={timerButtonDisabled}
+                className={`inline-flex items-center justify-center rounded-lg px-8 py-3 text-base font-semibold text-white transition-colors ${
+                  timerButtonDisabled
+                    ? "cursor-not-allowed bg-red-300"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                開始
+              </button>
+            </div>
+          ) : showReviewedText ? (
             <div className="h-full overflow-y-auto whitespace-pre-wrap break-words px-8 py-8 text-lg leading-8 text-slate-900">
               {reviewTokens && reviewTokens.length > 0 ? (
                 <HighlightedText

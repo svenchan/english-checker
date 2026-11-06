@@ -145,7 +145,20 @@ export default function Page() {
     <div className="h-screen bg-white">
       <div className="flex h-full min-h-0 flex-col md:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-white">
-          <Header mode={mode} showBrand={false} onModeChange={handleModeChange} />
+          <Header
+            mode={mode}
+            showBrand={false}
+            onModeChange={handleModeChange}
+            testTimer={
+              mode === CHECKER_MODES.TEST
+                ? {
+                    remainingMs,
+                    started: Boolean(testSession?.started),
+                    submitted: Boolean(testSession?.submitted)
+                  }
+                : null
+            }
+          />
             <WritingInput
               layout="split"
               surfaceRef={surfaceRef}

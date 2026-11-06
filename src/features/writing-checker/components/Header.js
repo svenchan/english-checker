@@ -25,16 +25,16 @@ const MODE_CONFIG = [
 
 const MODE_STYLES = {
   [CHECKER_MODES.PRACTICE]: {
-    active: "border-blue-600 bg-blue-100 text-blue-700",
-    inactive: "border-gray-200 bg-white text-gray-500 hover:border-blue-300 hover:text-blue-600"
+    active: "text-blue-600",
+    inactive: "text-gray-400 hover:text-blue-600"
   },
   [CHECKER_MODES.TEST]: {
-    active: "border-red-600 bg-red-100 text-red-700",
-    inactive: "border-gray-200 bg-white text-gray-500 hover:border-red-300 hover:text-red-600"
+    active: "text-red-600",
+    inactive: "text-gray-400 hover:text-red-600"
   }
 };
 
-export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onModeChange }) {
+export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onModeChange, testTimer = null }) {
   const isTestMode = mode === CHECKER_MODES.TEST;
   const headerBgClass = isTestMode ? "bg-red-600" : "bg-blue-600";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -113,7 +113,21 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
   const hasModeSwitch = typeof onModeChange === "function";
 
   return (
-    <div className={showBrand ? `${headerBgClass} p-6 text-white` : "shrink-0 bg-white px-4 py-3 text-slate-800"}>
+    <div className={showBrand ? `${headerBgClass} p-6 text-white` : "relative shrink-0 bg-white px-4 py-3 text-slate-800"}>
+      {testTimer && (
+        <div
+          className={`pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 text-sm font-semibold ${
+            testTimer.submitted
+              ? "text-green-700"
+              : testTimer.started
+                ? "text-red-700"
+                : "text-gray-600"
+          }`}
+        >
+          <Icons.Clock className="h-4 w-4" />
+          <span>{formatTimer(testTimer.remainingMs)}</span>
+        </div>
+      )}
       <div className={`flex items-center gap-3 ${showBrand || hasModeSwitch ? "justify-between" : "justify-end"}`}>
         {hasModeSwitch && (
           <div className="flex items-center gap-2">
@@ -134,7 +148,7 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
                         onModeChange(modeOption.id);
                       }
                     }}
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl border-2 transition-colors ${
+                    className={`flex h-10 w-10 items-center justify-center border-0 bg-transparent transition-colors ${
                       isActive ? MODE_STYLES[modeOption.id].active : MODE_STYLES[modeOption.id].inactive
                     }`}
                   >
@@ -217,5 +231,11 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
       </div>
     </div>
   );
-  }
- 
+}
+
+function formatTimer(ms = 0) {
+  const safeMs = Math.max(0, ms);
+  const minutes = Math.floor(safeMs / 60000);
+  const seconds = Math.floor((safeMs % 60000) / 1000);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
