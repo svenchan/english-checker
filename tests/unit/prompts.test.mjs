@@ -5,7 +5,6 @@ const { SYSTEM_MESSAGE, buildCheckPrompt } = await import("../../src/config/prom
 
 const SENTENCE_START_LINE =
   "文の最初が小文字なら、綴りとして指摘する。Mr. Mrs. Ms. Dr. Prof. St. Jr. Sr. や、1文字の頭文字のピリオドのあとは、新しい文にしない。";
-const FIRST_PERSON_LINE = "一語の i、i'm、i'll、i've、i'd は綴りとして指摘する。";
 const MISSING_END_LINE =
   "文章のいちばん最後に . ? ! が無ければ、綴りとして指摘する。最後以外の文に終わりの記号が無くても指摘しない。";
 const OTHER_PUNCT_LINE = ", や . の前の空白など、それ以外の句読点も綴りとして指摘する。";
@@ -40,8 +39,8 @@ test("omits PREP instructions when includePrepFeedback is false", () => {
 
 test("asks the model to flag each surface rule on its own line", () => {
   assert.equal(SYSTEM_MESSAGE.includes("大文字や句読点は綴り"), false);
+  assert.equal(SYSTEM_MESSAGE.includes("一語の i、i'm、i'll、i've、i'd は綴りとして指摘する。"), false);
   assert.ok(SYSTEM_MESSAGE.includes(SENTENCE_START_LINE));
-  assert.ok(SYSTEM_MESSAGE.includes(FIRST_PERSON_LINE));
   assert.ok(SYSTEM_MESSAGE.includes(MISSING_END_LINE));
   assert.ok(SYSTEM_MESSAGE.includes(OTHER_PUNCT_LINE));
   assert.ok(SYSTEM_MESSAGE.includes(SPELLING_EXPLANATION_LINE));

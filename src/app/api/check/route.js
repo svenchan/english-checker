@@ -4,6 +4,7 @@ import { enqueue } from "./queue";
 import { buildCheckPrompt, GROQ_SETTINGS, SYSTEM_MESSAGE } from "@/config/prompts";
 import { ERRORS, HTTP_STATUS } from "@/config/errors";
 import { validateAndFixResponse } from "@/lib/validators";
+import { applyFeedbackPolicy } from "@/lib/applyFeedbackPolicy";
 import { saveCheck } from "@/lib/saveCheck";
 import { MAX_CHAR_COUNT } from "@/features/writing-checker/constants";
 import { sanitizeInput } from "@/lib/sanitize";
@@ -205,6 +206,7 @@ export async function POST(req) {
 
         if (parsedFeedback) {
           parsedFeedback.topicText = topicText || null;
+          parsedFeedback = applyFeedbackPolicy(text, parsedFeedback);
         }
 
         const checkId = await saveCheck({
