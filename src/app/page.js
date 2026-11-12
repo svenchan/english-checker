@@ -62,10 +62,13 @@ export default function Page() {
 
   useEffect(() => {
     if (previousModeRef.current !== mode) {
-      if (
+      const enteredTimeAttack =
         mode === CHECKER_MODES.TEST &&
-        previousModeRef.current === CHECKER_MODES.PRACTICE
-      ) {
+        previousModeRef.current === CHECKER_MODES.PRACTICE;
+      const returnedToPractice =
+        mode === CHECKER_MODES.PRACTICE &&
+        previousModeRef.current === CHECKER_MODES.TEST;
+      if (enteredTimeAttack || returnedToPractice) {
         reset();
       }
       previousModeRef.current = mode;

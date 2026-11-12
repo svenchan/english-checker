@@ -62,8 +62,8 @@ export function WritingInput({
   }, [hasTestStarted]);
 
   const handlePrimaryClick = () => {
+    if (cooldown > 0) return;
     if (feedback) {
-      if (cooldown > 0) return;
       onReset?.();
       if (isTestMode) {
         onTestSessionRestart?.();
@@ -96,7 +96,7 @@ export function WritingInput({
   const canSubmit = isTestMode ? Boolean(testSession?.started) : text.trim().length > 0;
   const submitDisabled = feedback
     ? isChecking || cooldown > 0
-    : isChecking || !canSubmit || (isTestMode && (!testSession || !testSession.started));
+    : isChecking || cooldown > 0 || !canSubmit || (isTestMode && (!testSession || !testSession.started));
   const resolvedTopicText =
     displayTopicText?.trim() ||
     testSession?.topic?.trim() ||
@@ -269,18 +269,20 @@ export function WritingInput({
                   <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
                   <span>チェック中...</span>
                 </>
+              ) : cooldown > 0 ? (
+                <>
+                  <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
+                  <span>
+                    {feedback
+                      ? `新しく書くまで ${cooldown}s`
+                      : `${isTestMode ? "提出する" : "チェックする"}まで ${cooldown}s`}
+                  </span>
+                </>
               ) : feedback ? (
-                cooldown > 0 ? (
-                  <>
-                    <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-white"></div>
-                    <span>新しく書くまで {cooldown}s</span>
-                  </>
-                ) : (
-                  <>
-                    <Icons.RefreshCw className="h-5 w-5" />
-                    <span>新しく書く</span>
-                  </>
-                )
+                <>
+                  <Icons.RefreshCw className="h-5 w-5" />
+                  <span>新しく書く</span>
+                </>
               ) : (
                 <>
                   <Icons.Send className="h-5 w-5" />
@@ -418,18 +420,20 @@ export function WritingInput({
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               <span>チェック中...</span>
             </>
+          ) : cooldown > 0 ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <span>
+                {feedback
+                  ? `新しく書くまで ${cooldown}s`
+                  : `${isTestMode ? "提出する" : "チェックする"}まで ${cooldown}s`}
+              </span>
+            </>
           ) : feedback ? (
-            cooldown > 0 ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                <span>新しく書くまで {cooldown}s</span>
-              </>
-            ) : (
-              <>
-                <Icons.RefreshCw className="h-5 w-5" />
-                <span>新しく書く</span>
-              </>
-            )
+            <>
+              <Icons.RefreshCw className="h-5 w-5" />
+              <span>新しく書く</span>
+            </>
           ) : (
             <>
               <Icons.Send className="h-5 w-5" />
