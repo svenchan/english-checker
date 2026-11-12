@@ -150,7 +150,6 @@ export function WritingInput({
 
     return (
       <div className="flex min-h-0 flex-1 flex-col bg-white">
-        {!isTestMode && <div aria-hidden="true" className="h-16 shrink-0" />}
         {!isTestMode && typeof onTopicChange === "function" && !practiceTopicText && (
           <div className="shrink-0 px-6 pt-4 md:max-h-[40%] md:overflow-y-auto">
             {!topic?.enabled && (

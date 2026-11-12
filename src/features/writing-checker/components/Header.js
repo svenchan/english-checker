@@ -11,8 +11,7 @@ import Link from "next/link";
 const MODE_CONFIG = [
   {
     id: CHECKER_MODES.PRACTICE,
-    label: "練習モード",
-    description: "自由にテーマを選んで練習",
+    label: "英作チェッカー",
     icon: Icons.Pen
   },
   {
@@ -124,10 +123,10 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
       onUsernameChange={setUsername}
       onPasswordChange={setPassword}
       onSubmit={handlePasswordSubmit}
-      placement={hasModeSwitch ? "side" : "below"}
+      placement={hasModeSwitch ? "above" : "below"}
       buttonClassName={
         hasModeSwitch
-          ? "flex h-10 w-10 items-center justify-center rounded-lg p-0 text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:bg-slate-100 focus-visible:outline-blue-600"
+          ? "flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white p-0 text-slate-700 shadow-sm hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
           : "rounded-lg p-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 hover:bg-white/10 focus-visible:outline-white"
       }
     />
@@ -136,8 +135,11 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
   if (hasModeSwitch) {
     return (
       <>
-        {testTimer && (
-          <div className="relative h-16 shrink-0 bg-white text-slate-800">
+        <div className="relative h-16 shrink-0 bg-white text-slate-800">
+          <div className="flex h-full items-center px-6">
+            <ModeSwitch mode={mode} onModeChange={onModeChange} />
+          </div>
+          {testTimer && (
             <div
               className={`pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 text-sm font-semibold ${
                 testTimer.submitted
@@ -150,11 +152,9 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
               <Icons.Clock className="h-4 w-4" />
               <span>{formatTimer(testTimer.remainingMs)}</span>
             </div>
-          </div>
-        )}
-        <StudentEdgeBar mode={mode} onModeChange={onModeChange} isMenuOpen={isMenuOpen}>
-          {accountMenu}
-        </StudentEdgeBar>
+          )}
+        </div>
+        <div className="fixed bottom-4 right-4 z-50">{accountMenu}</div>
       </>
     );
   }
@@ -192,25 +192,16 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
   );
 }
 
-function ModeSwitch({ mode, onModeChange, tooltipPosition = "bottom", focusable = true }) {
+function ModeSwitch({ mode, onModeChange }) {
   return (
-    <div className={tooltipPosition === "left" ? "flex flex-col items-center gap-1" : "flex items-center gap-2"}>
+    <div className="flex items-center gap-2">
       {MODE_CONFIG.map((modeOption) => {
         const Icon = modeOption.icon;
         const isActive = mode === modeOption.id;
         return (
-          <Tooltip
-            key={modeOption.id}
-            content={
-              modeOption.id === CHECKER_MODES.TEST
-                ? modeOption.label
-                : `${modeOption.label} — ${modeOption.description}`
-            }
-            position={tooltipPosition}
-          >
+          <Tooltip key={modeOption.id} content={modeOption.label} position="bottom">
             <button
               type="button"
-              tabIndex={focusable ? 0 : -1}
               aria-pressed={isActive}
               onClick={() => {
                 if (modeOption.id !== mode) {
@@ -231,81 +222,6 @@ function ModeSwitch({ mode, onModeChange, tooltipPosition = "bottom", focusable 
   );
 }
 
-function StudentEdgeBar({ mode, onModeChange, isMenuOpen, children }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [desktopOpen, setDesktopOpen] = useState(false);
-  const hoveringRef = useRef(false);
-
-  useEffect(() => {
-    if (!isMenuOpen && !hoveringRef.current) {
-      setDesktopOpen(false);
-    }
-  }, [isMenuOpen]);
-
-  const revealDesktop = () => {
-    hoveringRef.current = true;
-    setDesktopOpen(true);
-  };
-
-  const hideDesktop = () => {
-    hoveringRef.current = false;
-    if (!isMenuOpen) {
-      setDesktopOpen(false);
-    }
-  };
-
-  const controlsOpen = mobileOpen || desktopOpen;
-
-  return (
-    <>
-      {mobileOpen && (
-        <button
-          type="button"
-          aria-label="サイドバーを閉じる"
-          className="fixed inset-0 z-40 bg-transparent md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-      <div
-        className="fixed inset-y-0 right-0 z-50 w-3"
-        onMouseEnter={revealDesktop}
-        onMouseLeave={hideDesktop}
-      >
-        <div
-          className={`absolute inset-y-0 right-0 flex items-center transition-transform duration-200 ${
-            controlsOpen ? "translate-x-0" : "translate-x-[calc(100%-1.25rem)]"
-          }`}
-        >
-        <button
-          type="button"
-          onClick={() => setMobileOpen((prev) => !prev)}
-          aria-expanded={controlsOpen}
-          aria-label={controlsOpen ? "サイドバーを閉じる" : "サイドバーを開く"}
-          className="flex h-16 w-5 shrink-0 items-center justify-center rounded-l-md border border-r-0 border-slate-200 bg-white shadow-md"
-        >
-          <span className="h-6 w-0.5 rounded-full bg-slate-400" />
-        </button>
-        <div
-          aria-hidden={!controlsOpen}
-          className="flex h-[calc(100%-3rem)] w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white shadow-lg"
-        >
-          <ModeSwitch
-            mode={mode}
-            tooltipPosition="left"
-            focusable={controlsOpen}
-            onModeChange={(nextMode) => {
-              onModeChange(nextMode);
-              setMobileOpen(false);
-            }}
-          />
-          <div className="mt-1">{children}</div>
-        </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 function AccountMenu({
   menuRef,
   isMenuOpen,
@@ -323,8 +239,8 @@ function AccountMenu({
   buttonClassName
 }) {
   const panelClassName =
-    placement === "side"
-      ? "absolute right-full top-0 z-10 mr-2 w-64 rounded-lg border border-gray-200 bg-white p-4 text-gray-900 shadow-lg"
+    placement === "above"
+      ? "absolute bottom-full right-0 z-10 mb-2 w-64 rounded-lg border border-gray-200 bg-white p-4 text-gray-900 shadow-lg"
       : "absolute right-0 z-10 mt-2 w-64 rounded-lg border border-gray-200 bg-white p-4 text-gray-900 shadow-lg";
 
   return (
@@ -337,7 +253,7 @@ function AccountMenu({
         aria-label="メニューを開く"
         className={buttonClassName}
       >
-        {placement === "side" ? (
+        {placement === "above" ? (
           <Icons.LogIn className="h-5 w-5" />
         ) : (
           <Icons.Menu className="h-6 w-6" />
