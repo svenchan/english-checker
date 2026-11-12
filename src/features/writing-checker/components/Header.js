@@ -1,7 +1,7 @@
 // components/checker/Header.js
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CHECKER_MODES, TEST_MODE } from "@/config/testMode";
 import { Icons } from "@/shared/components/ui/Icons";
@@ -195,6 +195,8 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
 
 function ModeSwitch({ mode, onModeChange }) {
   const [intro, setIntro] = useState(null);
+  const calloutRef = useRef(null);
+  const clockRef = useRef(null);
 
   useEffect(() => {
     const stored = readTimeAttackIntro(window.localStorage);
@@ -218,15 +220,29 @@ function ModeSwitch({ mode, onModeChange }) {
     intro && !intro.calloutDismissed && !intro.tried && mode !== CHECKER_MODES.TEST
   );
 
-  const dismissCallout = () => {
-    if (!intro) return;
+  const dismissCallout = useCallback(() => {
+    const stored = readTimeAttackIntro(window.localStorage);
+    if (stored.calloutDismissed || stored.tried) return;
     setIntro(
       writeTimeAttackIntro(window.localStorage, {
-        ...intro,
+        ...stored,
         calloutDismissed: true
       })
     );
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!showCallout) return;
+    const handlePointerDown = (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (calloutRef.current?.contains(target)) return;
+      if (clockRef.current?.contains(target)) return;
+      dismissCallout();
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [dismissCallout, showCallout]);
 
   const markTried = () => {
     setIntro(
@@ -246,13 +262,14 @@ function ModeSwitch({ mode, onModeChange }) {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2">
       {MODE_CONFIG.map((modeOption) => {
         const Icon = modeOption.icon;
         const isActive = mode === modeOption.id;
         const isTimeAttack = modeOption.id === CHECKER_MODES.TEST;
         const button = (
           <button
+            ref={isTimeAttack ? clockRef : undefined}
             type="button"
             aria-pressed={isActive}
             onClick={() => handleModeClick(modeOption.id)}
@@ -293,44 +310,44 @@ function ModeSwitch({ mode, onModeChange }) {
                 {button}
               </Tooltip>
             )}
-            {showCallout && (
-              <TimeAttackCallout onTry={() => handleModeClick(CHECKER_MODES.TEST)} onClose={dismissCallout} />
-            )}
           </span>
         );
       })}
+      {showCallout && <TimeAttackCallout calloutRef={calloutRef} onClose={dismissCallout} />}
     </div>
   );
 }
 
-function TimeAttackCallout({ onTry, onClose }) {
+function TimeAttackCallout({ calloutRef, onClose }) {
   return (
     <div
+      ref={calloutRef}
       role="dialog"
       aria-modal="false"
       aria-labelledby="time-attack-intro-title"
-      className="absolute left-0 top-full z-50 mt-2 w-64 rounded-lg border border-red-200 bg-white p-4 text-left shadow-lg"
+      className="relative flex max-w-[calc(100vw-11rem)] items-center rounded-md border border-red-200 bg-red-50 py-1 pl-2.5 pr-5 text-left"
     >
-      <p id="time-attack-intro-title" className="text-sm font-semibold text-red-600">
-        タイムアタック
+      <p id="time-attack-intro-title" className="truncate text-xs leading-4 text-slate-600">
+        <span className="font-semibold text-red-600">タイムアタック</span>
+        <span> · 5分以内に英文を書くモードです。</span>
       </p>
-      <p className="mt-1 text-sm text-slate-700">5分以内に英文を書くモードです。</p>
-      <div className="mt-3 flex gap-2">
-        <button
-          type="button"
-          onClick={onTry}
-          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="閉じる"
+        className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded text-slate-400 hover:text-slate-700"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="h-3 w-3"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
         >
-          試してみる
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          閉じる
-        </button>
-      </div>
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
     </div>
   );
 }
