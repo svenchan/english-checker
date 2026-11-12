@@ -3,9 +3,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CHECKER_MODES } from "@/config/testMode";
+import { CHECKER_MODES, TEST_MODE } from "@/config/testMode";
 import { Icons } from "@/shared/components/ui/Icons";
 import { Tooltip } from "@/shared/components/ui/Tooltip";
+import { readTimeAttackIntro, writeTimeAttackIntro } from "../lib/timeAttackIntro";
 import Link from "next/link";
 
 const MODE_CONFIG = [
@@ -193,31 +194,143 @@ export function Header({ mode = CHECKER_MODES.PRACTICE, showBrand = true, onMode
 }
 
 function ModeSwitch({ mode, onModeChange }) {
+  const [intro, setIntro] = useState(null);
+
+  useEffect(() => {
+    const stored = readTimeAttackIntro(window.localStorage);
+    const sessionMode = window.sessionStorage.getItem(TEST_MODE.uiModeStorageKey);
+    const alreadyInTimeAttack =
+      mode === CHECKER_MODES.TEST || sessionMode === CHECKER_MODES.TEST;
+    if (alreadyInTimeAttack && !stored.tried) {
+      setIntro(
+        writeTimeAttackIntro(window.localStorage, {
+          calloutDismissed: true,
+          tried: true
+        })
+      );
+      return;
+    }
+    setIntro(stored);
+  }, [mode]);
+
+  const showBadge = Boolean(intro && !intro.tried && mode !== CHECKER_MODES.TEST);
+  const showCallout = Boolean(
+    intro && !intro.calloutDismissed && !intro.tried && mode !== CHECKER_MODES.TEST
+  );
+
+  const dismissCallout = () => {
+    if (!intro) return;
+    setIntro(
+      writeTimeAttackIntro(window.localStorage, {
+        ...intro,
+        calloutDismissed: true
+      })
+    );
+  };
+
+  const markTried = () => {
+    setIntro(
+      writeTimeAttackIntro(window.localStorage, {
+        calloutDismissed: true,
+        tried: true
+      })
+    );
+  };
+
+  const handleModeClick = (nextMode) => {
+    if (nextMode === mode) return;
+    if (nextMode === CHECKER_MODES.TEST) {
+      markTried();
+    }
+    onModeChange(nextMode);
+  };
+
   return (
     <div className="flex items-center gap-2">
       {MODE_CONFIG.map((modeOption) => {
         const Icon = modeOption.icon;
         const isActive = mode === modeOption.id;
+        const isTimeAttack = modeOption.id === CHECKER_MODES.TEST;
+        const button = (
+          <button
+            type="button"
+            aria-pressed={isActive}
+            onClick={() => handleModeClick(modeOption.id)}
+            className={`relative flex h-10 w-10 items-center justify-center border-0 bg-transparent transition-colors ${
+              isActive ? MODE_STYLES[modeOption.id].active : MODE_STYLES[modeOption.id].inactive
+            }`}
+          >
+            <Icon className="h-5 w-5" />
+            <span className="sr-only">
+              {modeOption.label}
+              {isTimeAttack && showBadge ? "、新機能" : ""}
+            </span>
+            {isTimeAttack && showBadge && (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-1 -top-1 rounded-full bg-red-600 px-1 py-0.5 text-[9px] font-bold leading-none tracking-wide text-white shadow-sm motion-safe:animate-pulse"
+              >
+                NEW
+              </span>
+            )}
+          </button>
+        );
+
+        if (!isTimeAttack) {
+          return (
+            <Tooltip key={modeOption.id} content={modeOption.label} position="bottom">
+              {button}
+            </Tooltip>
+          );
+        }
+
         return (
-          <Tooltip key={modeOption.id} content={modeOption.label} position="bottom">
-            <button
-              type="button"
-              aria-pressed={isActive}
-              onClick={() => {
-                if (modeOption.id !== mode) {
-                  onModeChange(modeOption.id);
-                }
-              }}
-              className={`flex h-10 w-10 items-center justify-center border-0 bg-transparent transition-colors ${
-                isActive ? MODE_STYLES[modeOption.id].active : MODE_STYLES[modeOption.id].inactive
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              <span className="sr-only">{modeOption.label}</span>
-            </button>
-          </Tooltip>
+          <span key={modeOption.id} className="relative inline-flex">
+            {showCallout ? (
+              button
+            ) : (
+              <Tooltip content={modeOption.label} position="bottom">
+                {button}
+              </Tooltip>
+            )}
+            {showCallout && (
+              <TimeAttackCallout onTry={() => handleModeClick(CHECKER_MODES.TEST)} onClose={dismissCallout} />
+            )}
+          </span>
         );
       })}
+    </div>
+  );
+}
+
+function TimeAttackCallout({ onTry, onClose }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="time-attack-intro-title"
+      className="absolute left-0 top-full z-50 mt-2 w-64 rounded-lg border border-red-200 bg-white p-4 text-left shadow-lg"
+    >
+      <p id="time-attack-intro-title" className="text-sm font-semibold text-red-600">
+        タイムアタック
+      </p>
+      <p className="mt-1 text-sm text-slate-700">5分以内に英文を書くモードです。</p>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={onTry}
+          className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-700"
+        >
+          試してみる
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          閉じる
+        </button>
+      </div>
     </div>
   );
 }

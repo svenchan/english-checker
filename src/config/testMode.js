@@ -8,6 +8,7 @@ export const TEST_MODE = Object.freeze({
   minWords: 15,
   storageKey: "test_session_v1",
   uiModeStorageKey: "checker_ui_mode",
+  introStorageKey: "time_attack_intro_v1",
   promptVersion: "test_v1",
   tooShortMessage:
     "時間になりましたが、15語以上書けていません。次のトピックでもう一度挑戦しましょう。"
