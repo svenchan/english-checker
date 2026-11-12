@@ -215,7 +215,6 @@ function ModeSwitch({ mode, onModeChange }) {
     setIntro(stored);
   }, [mode]);
 
-  const showBadge = Boolean(intro && !intro.tried && mode !== CHECKER_MODES.TEST);
   const showCallout = Boolean(
     intro && !intro.calloutDismissed && !intro.tried && mode !== CHECKER_MODES.TEST
   );
@@ -280,9 +279,9 @@ function ModeSwitch({ mode, onModeChange }) {
             <Icon className="h-5 w-5" />
             <span className="sr-only">
               {modeOption.label}
-              {isTimeAttack && showBadge ? "、新機能" : ""}
+              {isTimeAttack ? "、新機能" : ""}
             </span>
-            {isTimeAttack && showBadge && (
+            {isTimeAttack && (
               <span
                 aria-hidden="true"
                 className="pointer-events-none absolute -right-1 -top-1 rounded-full bg-red-600 px-1 py-0.5 text-[9px] font-bold leading-none tracking-wide text-white shadow-sm motion-safe:animate-pulse"
