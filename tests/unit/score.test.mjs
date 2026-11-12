@@ -30,6 +30,9 @@ test("scoreFromMistakes uses the catalog weight when a code is present", () => {
   assert.equal(scoreFromMistakes([{ code: "first_person_i" }]), 95);
   assert.equal(scoreFromMistakes([{ code: "sentence_start_cap" }]), 95);
   assert.equal(scoreFromMistakes([{ code: "missing_end_punct", type: "punctuation" }]), 95);
+  assert.equal(scoreFromMistakes([{ code: "space_before_comma" }]), 95);
+  assert.equal(scoreFromMistakes([{ code: "space_after_terminal" }]), 95);
+  assert.equal(scoreFromMistakes([{ code: "comma_space_both" }]), 95);
 });
 
 test("scoreFromMistakes treats unknown types as grammar/vocab penalties", () => {

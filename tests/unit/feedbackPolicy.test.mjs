@@ -224,6 +224,170 @@ test("applyFeedbackPolicy keeps a spelling fix and a missing final stop on the s
   assert.equal(feedback.overallScore, 90);
 });
 
+test("findServerMistakes flags a space before a comma, period, question mark, or exclamation", () => {
+  const comma = findServerMistakes("I like cats , dogs.");
+  assert.deepEqual(
+    comma.map((mistake) => [mistake.original, mistake.corrected, mistake.code, mistake.type]),
+    [["cats ,", "cats,", "space_before_comma", "punctuation"]]
+  );
+  assert.equal(comma[0].explanation, "コンマの前に空白はいらない。cats , → cats,");
+
+  const period = findServerMistakes("I like cats .");
+  assert.deepEqual(
+    period.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["cats .", "cats.", "space_before_period"]]
+  );
+  assert.equal(period[0].explanation, "ピリオドの前に空白はいらない。cats . → cats.");
+
+  const terminal = findServerMistakes("Is she kind ? Wow !");
+  assert.deepEqual(
+    terminal.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [
+      ["kind ?", "kind?", "space_before_terminal"],
+      ["Wow !", "Wow!", "space_before_terminal"]
+    ]
+  );
+  assert.equal(terminal[0].explanation, "? や ! の前に空白はいらない。kind ? → kind?");
+});
+
+test("findServerMistakes flags a missing space after a comma or sentence mark", () => {
+  const comma = findServerMistakes("I like cats,dogs.");
+  assert.deepEqual(
+    comma.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["cats,dogs", "cats, dogs", "space_after_comma"]]
+  );
+  assert.equal(comma[0].explanation, "コンマの後には空白を入れる。cats,dogs → cats, dogs");
+
+  const period = findServerMistakes("I like cats.She is kind.");
+  assert.deepEqual(
+    period.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["cats.She", "cats. She", "space_after_terminal"]]
+  );
+  assert.equal(period[0].explanation, ". や ? や ! の後には空白を入れる。cats.She → cats. She");
+
+  const bang = findServerMistakes("Wow!Yes.");
+  assert.deepEqual(
+    bang.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["Wow!Yes", "Wow! Yes", "space_after_terminal"]]
+  );
+});
+
+test("findServerMistakes combines a space before a mark with a missing space after it", () => {
+  const comma = findServerMistakes("I like cats ,dogs.");
+  assert.deepEqual(
+    comma.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["cats ,dogs", "cats, dogs", "comma_space_both"]]
+  );
+  assert.equal(
+    comma[0].explanation,
+    "コンマの前の空白を消して、後に空白を入れる。cats ,dogs → cats, dogs"
+  );
+
+  const period = findServerMistakes("I like cats .She is kind.");
+  assert.deepEqual(
+    period.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["cats .She", "cats. She", "period_space_both"]]
+  );
+  assert.equal(
+    period[0].explanation,
+    "ピリオドの前の空白を消して、後に空白を入れる。cats .She → cats. She"
+  );
+
+  const terminal = findServerMistakes("Really ?Yes.");
+  assert.deepEqual(
+    terminal.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["Really ?Yes", "Really? Yes", "terminal_space_both"]]
+  );
+  assert.equal(
+    terminal[0].explanation,
+    "? や ! の前の空白を消して、後に空白を入れる。Really ?Yes → Really? Yes"
+  );
+});
+
+test("findServerMistakes leaves numbers, initials, and correct spacing alone", () => {
+  assert.deepEqual(findServerMistakes("I have 1,000 cats."), []);
+  assert.deepEqual(findServerMistakes("Pi is 3.14 exactly."), []);
+  assert.deepEqual(findServerMistakes("I like cats, dogs."), []);
+  assert.deepEqual(findServerMistakes("I live in the U.S.A. today."), []);
+  assert.deepEqual(
+    findServerMistakes("I met Mr.Tanaka today.").map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["Mr.Tanaka", "Mr. Tanaka", "space_after_terminal"]]
+  );
+  assert.deepEqual(
+    findServerMistakes("See the U.S.army today.").map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["U.S.army", "U.S. army", "space_after_terminal"]]
+  );
+  assert.deepEqual(
+    findServerMistakes("See e.g.this now.").map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["e.g.this", "e.g. this", "space_after_terminal"]]
+  );
+});
+
+test("findServerMistakes collapses a run of spaced dots into one mistake", () => {
+  const mistakes = findServerMistakes("I waited . . . Today.");
+  assert.deepEqual(
+    mistakes.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [["waited . . .", "waited...", "space_before_period"]]
+  );
+  assert.equal(mistakes[0].explanation, "ピリオドの前に空白はいらない。waited . . . → waited...");
+});
+
+test("findServerMistakes capitalizes a word glued to the previous sentence", () => {
+  const mistakes = findServerMistakes("I like cats.she is kind.");
+  assert.deepEqual(
+    mistakes.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [
+      ["cats.she", "cats. she", "space_after_terminal"],
+      ["she", "She", "sentence_start_cap"]
+    ]
+  );
+  assert.equal(mistakes[1].explanation, "文のはじめは大文字にする。she → She");
+
+  const both = findServerMistakes("I like cats .she is kind.");
+  assert.deepEqual(
+    both.map((mistake) => [mistake.original, mistake.corrected, mistake.code]),
+    [
+      ["cats .she", "cats. she", "period_space_both"],
+      ["she", "She", "sentence_start_cap"]
+    ]
+  );
+});
+
+test("applyFeedbackPolicy keeps the server spacing message for an exact model copy", () => {
+  const feedback = applyFeedbackPolicy("I like cats , dogs.", {
+    mistakes: [
+      {
+        original: "cats ,",
+        corrected: "cats,",
+        explanation: "モデルの説明",
+        type: "spelling"
+      }
+    ]
+  });
+  assert.equal(feedback.mistakes.length, 1);
+  assert.equal(feedback.mistakes[0].code, "space_before_comma");
+  assert.equal(feedback.mistakes[0].explanation, "コンマの前に空白はいらない。cats , → cats,");
+  assert.equal(feedback.overallScore, 95);
+});
+
+test("applyFeedbackPolicy drops a spacing hit covered by a wider model rewrite", () => {
+  const feedback = applyFeedbackPolicy("I like cats , dogs.", {
+    mistakes: [
+      {
+        original: "cats , dogs",
+        corrected: "cats and dogs",
+        explanation: "and を使うよ。",
+        type: "grammar"
+      }
+    ]
+  });
+  assert.deepEqual(
+    feedback.mistakes.map((mistake) => mistake.explanation),
+    ["and を使うよ。"]
+  );
+  assert.equal(feedback.overallScore, 90);
+});
+
 test("applyFeedbackPolicy keeps a wider model rewrite and skips the server hit", () => {
   const feedback = applyFeedbackPolicy("i like cat", {
     mistakes: [
