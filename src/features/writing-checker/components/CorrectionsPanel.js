@@ -12,7 +12,9 @@ const MISTAKE_FILTERS = [
   { id: "all", label: "すべて" },
   { id: "spelling", label: "スペル" },
   { id: "vocabulary", label: "単語" },
-  { id: "grammar", label: "文法" }
+  { id: "grammar", label: "文法" },
+  { id: "punctuation", label: "句読点" },
+  { id: "capitalization", label: "大文字" }
 ];
 
 function renderCorrectedWithBold(original, corrected) {
