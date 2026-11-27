@@ -136,8 +136,14 @@ export async function POST(req) {
               { role: "user", content: prompt }
             ],
             temperature: GROQ_SETTINGS.temperature,
-            max_tokens: GROQ_SETTINGS.max_tokens
+            max_tokens: GROQ_SETTINGS.max_tokens,
+            // gpt-oss defaults to "medium" if omitted; GROQ_SETTINGS.reasoning_effort is "low".
+            reasoning_effort: GROQ_SETTINGS.reasoning_effort
           };
+
+          if (GROQ_SETTINGS.seed != null) {
+            requestBody.seed = GROQ_SETTINGS.seed;
+          }
 
           if (options.useJsonResponseFormat) {
             requestBody.response_format = GROQ_SETTINGS.response_format;

@@ -1,9 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-const { SYSTEM_MESSAGE, buildCheckPrompt } = await import("../../src/config/prompts.js");
-
-const OTHER_PUNCT_LINE = ", や . の前の空白など、それ以外の句読点も綴りとして指摘する。";
+const {
+  SYSTEM_MESSAGE,
+  SYSTEM_MESSAGE_VARIANTS,
+  buildCheckPrompt,
+  GROQ_SETTINGS
+} = await import("../../src/config/prompts.js");
 
 test("includes topic section when topic text is provided", () => {
   const prompt = buildCheckPrompt("Sample text.", "My hobby");
@@ -21,31 +24,60 @@ test("describes topicFeedback output requirements", () => {
   const prompt = buildCheckPrompt("Sample text.", "My hobby");
   assert.ok(prompt.includes("topicFeedback"), "topicFeedback instructions missing");
   assert.ok(prompt.includes("prepChecklist"), "prepChecklist instructions missing");
-  assert.ok(prompt.includes("PREP"), "PREP guidance missing");
+  assert.ok(prompt.includes("point="), "PREP field guidance missing");
+  assert.ok(prompt.includes("reason="), "reason guidance missing");
+  assert.ok(prompt.includes("evidence="), "evidence guidance missing");
+  assert.ok(prompt.includes("pointSummary="), "pointSummary guidance missing");
+  assert.ok(prompt.includes("Japanese"), "student-facing values should stay Japanese");
 });
 
 test("omits PREP instructions when includePrepFeedback is false", () => {
   const prompt = buildCheckPrompt("Sample text.", "My hobby", { includePrepFeedback: false });
   assert.equal(prompt.includes("<topic>"), false);
   assert.equal(prompt.includes("prepChecklist"), false, "Prompt should omit PREP checklist instructions");
-  assert.equal(prompt.includes("PREP"), false, "Prompt should omit PREP guidance");
+  assert.equal(prompt.includes("topicFeedback"), false, "Prompt should omit topicFeedback guidance");
 });
 
-test("asks the model to flag each surface rule on its own line", () => {
-  assert.equal(SYSTEM_MESSAGE.includes("大文字や句読点は綴り"), false);
-  assert.equal(SYSTEM_MESSAGE.includes("一語の i、i'm、i'll、i've、i'd は綴りとして指摘する。"), false);
-  assert.equal(
-    SYSTEM_MESSAGE.includes("文の最初が小文字なら、綴りとして指摘する。"),
-    false
+test("system message is English rules with Japanese explanations and skips server-owned surface rules", () => {
+  assert.ok(SYSTEM_MESSAGE.startsWith("You are an English writing teacher"), "rules should be English");
+  assert.ok(SYSTEM_MESSAGE.includes("easy Japanese"), "explanations must stay Japanese");
+  assert.ok(
+    SYSTEM_MESSAGE.includes("Sentence-start capitals, capital \"I\""),
+    "should tell the model to skip server-owned surface rules"
+  );
+  assert.ok(
+    SYSTEM_MESSAGE.includes("spacing around , . ? !"),
+    "should tell the model to skip punctuation spacing (server-owned)"
+  );
+  assert.ok(
+    SYSTEM_MESSAGE.includes('spelling: set to "" (empty). The server writes it.'),
+    "spelling explanations should be left empty for the server"
+  );
+  assert.ok(
+    SYSTEM_MESSAGE.includes("not a real English spelling"),
+    "spelling should cover real misspellings"
   );
   assert.equal(
-    SYSTEM_MESSAGE.includes("文章のいちばん最後に . ? ! が無ければ、綴りとして指摘する。"),
-    false
+    SYSTEM_MESSAGE.includes("space before , or ."),
+    false,
+    "active prompt should not ask the model to reason about punctuation spacing"
   );
   assert.equal(
-    SYSTEM_MESSAGE.includes("つづりの explanation は、なぜそのつづりをなおすのかを1文書く。"),
-    false
+    SYSTEM_MESSAGE.includes("missing/wrong mid-sentence"),
+    false,
+    "active prompt should not ask the model to flag mid-sentence punct"
   );
-  assert.ok(SYSTEM_MESSAGE.includes(OTHER_PUNCT_LINE));
-  assert.ok(SYSTEM_MESSAGE.includes("文法と単語の explanation は1文。"));
+});
+
+test("prompt variants expose baseline JA and intermediate English for measurement", () => {
+  assert.ok(SYSTEM_MESSAGE_VARIANTS.baseline_ja.includes("あなたは日本の中学生向け"));
+  assert.ok(SYSTEM_MESSAGE_VARIANTS.en_rules.includes("space before , or ."));
+  assert.equal(SYSTEM_MESSAGE_VARIANTS.en_rules_no_punct, SYSTEM_MESSAGE);
+});
+
+test("GROQ_SETTINGS: low reasoning, temp 0.3, seed for iteration", () => {
+  assert.equal(GROQ_SETTINGS.reasoning_effort, "low");
+  assert.equal(GROQ_SETTINGS.model, "openai/gpt-oss-20b");
+  assert.equal(GROQ_SETTINGS.temperature, 0.3);
+  assert.equal(GROQ_SETTINGS.seed, 42);
 });
